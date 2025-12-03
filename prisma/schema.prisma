@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                          String   @id @default(cuid())
+  name                        String?
+  email                       String   @unique
+  password                    String?
+  avatar                      String?
+
+  // OTP
+  otpCode                     String?
+  otpCodeExpiration           DateTime?
+
+  // Password Reset
+  resetPasswordToken          String?
+  resetPasswordTokenExpiration DateTime?
+
+  // Verification tracking
+  isVerified                  Boolean?  @default(false)
+  registrationAttempts        Int?     @default(0) 
+  lastRegistrationAttempt     DateTime? 
+
+  // Activity tracking
+  isOnline                    Boolean?  @default(false)
+  lastSeen                    DateTime?
+
+  // Relations
+  sentMessages                Chat[]        @relation("SentMessages")
+  receivedMessages            Chat[]        @relation("ReceivedMessages")
+  createdGroups               Group[]       @relation("GroupCreator")
+  groupMemberships            GroupMember[]
+  groupMessages               GroupChat[]
+
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+}
+
+model Chat {
+  chatId      String   @id @default(cuid())
+  senderId    String
+  receiverId  String
+  message     String
+  createdAt   DateTime @default(now())
+
+  sender      User     @relation("SentMessages",  fields: [senderId],   references: [id])
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+}
+
+
+model Group {
+  id              String         @id @default(cuid())
+  name            String
+  groupDescription String?
+  groupImage      String?
+  createdAt       DateTime       @default(now())
+  
+  // Who created the group (Admin Owner)
+  createdBy       String
+  creator         User           @relation("GroupCreator", fields: [createdBy], references: [id])
+
+  // Relations
+  members         GroupMember[]
+  messages        GroupChat[]
+}
+
+model GroupMember {
+  id        String   @id @default(cuid())
+  groupId   String
+  userId    String
+  role      String   @default("member") // admin | member
+  joinedAt  DateTime @default(now())
+
+  // Relations
+  group     Group    @relation(fields: [groupId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([groupId, userId]) // User cannot join same group twice
+}
+
+model GroupChat {
+  id         String   @id @default(cuid())
+  groupId    String
+  senderId   String
+  message    String
+  messageType String  @default("text") // text / image / video / file
+  attachmentUrl String?
+  createdAt  DateTime @default(now())
+
+  // Relations
+  group      Group    @relation(fields: [groupId], references: [id])
+  sender     User     @relation(fields: [senderId], references: [id])
+}

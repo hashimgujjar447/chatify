@@ -1,6 +1,6 @@
 import { ApiError } from "@/lib/ApiError";
 import { prisma } from "@/lib/prisma";
-import { sendMail } from "@/lib/sendMail";
+import { sendMailNodemailer } from "@/lib/sendMailNodemailer";
 import { NextRequest,NextResponse } from "next/server";
 import jwt from "jsonwebtoken"
 
@@ -44,9 +44,15 @@ export async function POST(req:NextRequest){
 
         // Send reset link via email
         const resetLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password/${jwtToken}`;
-        await sendMail(
-            email, 
-            `Click here to reset your password: ${resetLink}\n\nThis link will expire in 15 minutes.`
+        await sendMailNodemailer(
+            email,
+            "Password Reset Request",
+            `<h2>Password Reset Request</h2>
+            <p>Click the link below to reset your password:</p>
+            <a href="${resetLink}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
+            <p>Or copy this link: ${resetLink}</p>
+            <p>This link will expire in 15 minutes.</p>
+            <p>If you didn't request this, please ignore this email.</p>`
         );
 
         return NextResponse.json({ 

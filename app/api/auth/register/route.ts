@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ApiError } from "@/lib/ApiError";
-import { sendMail } from "@/lib/sendMail";
+import { sendMailNodemailer } from "@/lib/sendMailNodemailer";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcrypt"
 
@@ -61,7 +61,13 @@ export async function POST(req: NextRequest) {
       });
 
       // Send plain OTP via email
-      await sendMail(email, otpCode);
+      await sendMailNodemailer(
+        email,
+        "Your OTP Code",
+        `<h2>Email Verification</h2>
+        <p>Your OTP code is: <strong>${otpCode}</strong></p>
+        <p>This code will expire in 5 minutes.</p>`
+      );
       return NextResponse.json({ success: true, email });
 
     } else {
@@ -83,7 +89,13 @@ export async function POST(req: NextRequest) {
       });
 
       // Send plain OTP via email
-      await sendMail(email, otpCode);
+      await sendMailNodemailer(
+        email,
+        "Your OTP Code",
+        `<h2>Email Verification</h2>
+        <p>Your OTP code is: <strong>${otpCode}</strong></p>
+        <p>This code will expire in 5 minutes.</p>`
+      );
       return NextResponse.json({ success: true, email });
     }
 

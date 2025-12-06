@@ -3,6 +3,21 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  
+  /* WhatsApp Theme Colors */
+  --whatsapp-green: #008069;
+  --whatsapp-green-dark: #00a884;
+  --whatsapp-green-light: #25D366;
+  --whatsapp-teal: #075E54;
+  --whatsapp-light-green: #d9fdd3;
+  --whatsapp-bg: #efeae2;
+  --whatsapp-dark-bg: #0b141a;
+  --whatsapp-sidebar: #ffffff;
+  --whatsapp-sidebar-dark: #1f2c33;
+  --whatsapp-message-bg: #ffffff;
+  --whatsapp-message-dark: #1f2c33;
+  --whatsapp-input-bg: #f0f2f5;
+  --whatsapp-input-dark: #2a3942;
 }
 
 @theme inline {
@@ -10,12 +25,32 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  
+  /* WhatsApp Theme Integration */
+  --color-whatsapp-primary: var(--whatsapp-green);
+  --color-whatsapp-primary-dark: var(--whatsapp-green-dark);
+  --color-whatsapp-accent: var(--whatsapp-green-light);
+  --color-whatsapp-teal: var(--whatsapp-teal);
+  --color-whatsapp-light: var(--whatsapp-light-green);
+  --color-whatsapp-bg: var(--whatsapp-bg);
+  --color-whatsapp-dark-bg: var(--whatsapp-dark-bg);
+  --color-whatsapp-sidebar: var(--whatsapp-sidebar);
+  --color-whatsapp-sidebar-dark: var(--whatsapp-sidebar-dark);
+  --color-whatsapp-message: var(--whatsapp-message-bg);
+  --color-whatsapp-message-dark: var(--whatsapp-message-dark);
+  --color-whatsapp-input: var(--whatsapp-input-bg);
+  --color-whatsapp-input-dark: var(--whatsapp-input-dark);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    
+    /* WhatsApp Dark Mode Adjustments */
+    --whatsapp-sidebar: #111b21;
+    --whatsapp-message-bg: #1f2c33;
+    --whatsapp-input-bg: #2a3942;
   }
 }
 
@@ -23,4 +58,123 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* WhatsApp-style scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f0f2f5;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #b3b3b3;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #9a9a9a;
+}
+
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-track {
+    background: #1f2c33;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #374955;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: #4a5f6f;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* WhatsApp-style animations */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.3s ease-out;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-in;
+}
+
+/* WhatsApp message bubble pattern background */
+.whatsapp-pattern {
+  background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0icGF0dGVybiIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjEwMCIgaGVpZ2h0PSIxMDAiPjxwYXRoIGQ9Ik0wIDEwMGgxMDBWMEgweiIgZmlsbD0ibm9uZSIvPjxwYXRoIGQ9Ik01MCA1MGgyMHYyMEg1MHoiIGZpbGw9IiMwMDAwMDAiIGZpbGwtb3BhY2l0eT0iLjAyIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCBmaWxsPSJ1cmwoI3BhdHRlcm4pIiB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIi8+PC9zdmc+');
+}
+
+/* Focus styles for accessibility */
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--whatsapp-green);
+  outline-offset: 2px;
+}
+
+/* Utility classes for WhatsApp theme */
+.bg-whatsapp-primary {
+  background-color: var(--whatsapp-green);
+}
+
+.bg-whatsapp-primary-dark {
+  background-color: var(--whatsapp-green-dark);
+}
+
+.bg-whatsapp-accent {
+  background-color: var(--whatsapp-green-light);
+}
+
+.bg-whatsapp-light {
+  background-color: var(--whatsapp-light-green);
+}
+
+.bg-whatsapp-bg {
+  background-color: var(--whatsapp-bg);
+}
+
+.text-whatsapp-primary {
+  color: var(--whatsapp-green);
 }

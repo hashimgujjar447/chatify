@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAuth } from "./lib/verifyAuth";
 
+
 export async function proxy(req: NextRequest) {
     const path = req.nextUrl.pathname;
+
     
     // Skip proxy for auth pages and static files
     if (
@@ -21,7 +23,7 @@ export async function proxy(req: NextRequest) {
     try {
         const user = await verifyAuth();
         console.log('✅ User verified:', user);
-
+        
         if (!user || !user.userId) {
             console.log('❌ No user found, redirecting to login');
             return NextResponse.redirect(new URL("/login", req.url));
@@ -47,4 +49,5 @@ export async function proxy(req: NextRequest) {
 // This matcher runs proxy on ALL routes
 export const config = {
     matcher: '/:path*'
+
 }

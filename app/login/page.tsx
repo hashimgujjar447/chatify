@@ -3,6 +3,9 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { Mail, Lock, Eye, EyeOff, MessageCircle, ArrowRight, Sparkles } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { loginUser } from '@/store/features/auth/userSlice'
+import { useAppDispatch } from '@/store/hooks/hooks'
+
 const LoginPage = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -10,6 +13,7 @@ const LoginPage = () => {
   const [isLoading, setIsLoading] = useState(false)
   const[error,setError]=useState("")
   const router=useRouter()
+  const dispatch=useAppDispatch()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -17,24 +21,19 @@ const LoginPage = () => {
     setError('')
     
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ email, password })
-      })
+     
+        const data=await dispatch(loginUser({email,password}))
 
-      const data = await response.json()
+      
 
-      if (!response.ok) {
-        throw new Error(data.error || "Login failed")
+      if(data){
+    // Success - redirect to home
+      console.log('Login successful:', data)
+      router.push("/")
+      
       }
 
-      // Success - redirect to home
-      console.log('Login successful:', data)
-      window.location.href = "/"
-      
+  
     } catch (error: any) {
       console.error('Login error:', error)
       setError(error.message || "Failed to login. Please check your credentials.")

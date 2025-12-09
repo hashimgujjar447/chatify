@@ -57,9 +57,10 @@ export async function POST(req:NextRequest){
             name:"auth_token",
             value:token,
             httpOnly:true,
-            secure:true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
             path:"/",
-            maxAge:60*60*24
+            maxAge:60*60*24*3 // 3 days to match JWT expiry
         }
     )
 

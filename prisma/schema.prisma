@@ -30,17 +30,42 @@ model User {
   // Activity tracking
   isOnline                    Boolean?  @default(false)
   lastSeen                    DateTime?
+  
 
   // Relations
   sentMessages                Chat[]        @relation("SentMessages")
   receivedMessages            Chat[]        @relation("ReceivedMessages")
   createdGroups               Group[]       @relation("GroupCreator")
+  sentConnections     UserConnections[] @relation("UserConnectionSender")
+  receivedConnections UserConnections[] @relation("UserConnectionReceiver")
+
   groupMemberships            GroupMember[]
   groupMessages               GroupChat[]
 
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
 }
+
+model UserConnections {
+  id          String   @id @default(cuid())
+  senderId    String
+  receiverId  String
+  status      ConnectionStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+
+  sender      User     @relation("UserConnectionSender", fields: [senderId], references: [id])
+  receiver    User     @relation("UserConnectionReceiver", fields: [receiverId], references: [id])
+
+  @@unique([senderId, receiverId]) // same connection cannot duplicate
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+
 
 model Chat {
   chatId      String   @id @default(cuid())

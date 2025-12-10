@@ -21,22 +21,20 @@ const LoginPage = () => {
     setError('')
     
     try {
-     
-        const data=await dispatch(loginUser({email,password}))
-
+      const result = await dispatch(loginUser({email, password}))
       
-
-      if(data){
-    // Success - redirect to home
-      console.log('Login successful:', data)
-      router.push("/")
-      
+      if (loginUser.fulfilled.match(result)) {
+        // Success - redirect to home
+        console.log('Login successful:', result.payload)
+        router.push("/")
+      } else if (loginUser.rejected.match(result)) {
+        // Handle error
+        const errorMessage = result.payload as string || "Failed to login. Please check your credentials."
+        setError(errorMessage)
       }
-
-  
     } catch (error: any) {
       console.error('Login error:', error)
-      setError(error.message || "Failed to login. Please check your credentials.")
+      setError("An unexpected error occurred. Please try again.")
     } finally {
       setIsLoading(false)
     }

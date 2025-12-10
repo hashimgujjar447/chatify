@@ -11,6 +11,8 @@ export async function proxy(req: NextRequest) {
         path.startsWith('/login') ||
         path.startsWith('/register') ||
         path.startsWith('/verify') ||
+        path.startsWith('/forgot-password') ||
+        path.startsWith('/reset-password') ||
         path.startsWith('/api') ||
         path.startsWith('/_next') ||
         path.startsWith('/favicon.ico')

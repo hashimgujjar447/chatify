@@ -1,9 +1,18 @@
 "use client"
 import React, { useState } from 'react'
 import Header from './header'
-import { Span } from 'next/dist/trace'
+import { MessageSquare, Users, Lock, Zap } from 'lucide-react'
 
-const ChatBox = () => {
+interface ChatBoxProps {
+  selectedUser?: {
+    id: string;
+    name: string | null;
+    email: string;
+    avatar: string | null;
+  } | null;
+}
+
+const ChatBox = ({ selectedUser = null }: ChatBoxProps) => {
   const[message,setMessage]=useState("")
   const loginUserId="U202"
   const chats=[
@@ -81,6 +90,70 @@ const handleSendMessage=async(message:string)=>{
    console.log(message)
    setMessage("")
 }
+
+  // If no user is selected, show welcome screen
+  if (!selectedUser) {
+    return (
+      <div className='flex-1 flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100'>
+        <div className='flex-1 flex items-center justify-center p-8'>
+          <div className='text-center max-w-md'>
+            <div className='mb-8 relative'>
+              <div className='w-48 h-48 mx-auto bg-gradient-to-br from-teal-400 to-cyan-500 rounded-full flex items-center justify-center shadow-2xl'>
+                <MessageSquare size={80} className='text-white' strokeWidth={1.5} />
+              </div>
+              <div className='absolute top-0 right-20 w-20 h-20 bg-blue-400 rounded-full opacity-20 animate-pulse'></div>
+              <div className='absolute bottom-0 left-20 w-16 h-16 bg-green-400 rounded-full opacity-20 animate-pulse delay-75'></div>
+            </div>
+            
+            <h1 className='text-4xl font-bold text-gray-800 mb-4'>
+              Welcome to Chatify
+            </h1>
+            
+            <p className='text-gray-600 text-lg mb-8'>
+              Connect with your friends and start chatting instantly
+            </p>
+            
+            <div className='grid grid-cols-1 gap-4 text-left bg-white rounded-2xl p-6 shadow-lg'>
+              <div className='flex items-start gap-3'>
+                <div className='w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center flex-shrink-0'>
+                  <Users size={20} className='text-teal-600' />
+                </div>
+                <div>
+                  <h3 className='font-semibold text-gray-800'>Select a Contact</h3>
+                  <p className='text-sm text-gray-600'>Choose someone from your contacts to start chatting</p>
+                </div>
+              </div>
+              
+              <div className='flex items-start gap-3'>
+                <div className='w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0'>
+                  <Zap size={20} className='text-blue-600' />
+                </div>
+                <div>
+                  <h3 className='font-semibold text-gray-800'>Instant Messaging</h3>
+                  <p className='text-sm text-gray-600'>Send and receive messages in real-time</p>
+                </div>
+              </div>
+              
+              <div className='flex items-start gap-3'>
+                <div className='w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0'>
+                  <Lock size={20} className='text-green-600' />
+                </div>
+                <div>
+                  <h3 className='font-semibold text-gray-800'>Private & Secure</h3>
+                  <p className='text-sm text-gray-600'>Your conversations are protected and encrypted</p>
+                </div>
+              </div>
+            </div>
+            
+            <p className='text-gray-500 text-sm mt-6'>
+              👈 Select a contact from the sidebar to begin
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className='flex-1 flex flex-col h-screen'>
         <Header/>

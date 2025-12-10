@@ -69,9 +69,9 @@ export async function POST(req:NextRequest){
    } catch (error) {
     console.error(error);
     if(error instanceof ApiError){
-             return NextResponse.json({ error: error.message }, { status: error.statusCode });
+             return NextResponse.json({ success: false, message: error.message }, { status: error.statusCode });
         }
         
-          return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+          return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 });
    }
 }

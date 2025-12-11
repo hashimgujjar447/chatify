@@ -2,8 +2,18 @@ import React from "react";
 import Image from "next/image";
 import { Ellipsis, Phone, Video } from "lucide-react";
 
+interface HeaderProps {
+  selectedChatUser: {
+    id: string;
+    name: string | null;
+    email: string;
+    avatar: string | null;
+    isOnline:boolean | null
+  }
+}
 
-const Header = () => {
+const Header = ({ selectedChatUser }: HeaderProps) => {
+
   return (
     <div className="flex items-center px-4 py-3 justify-between border-b border-bColor">
       <div className="flex items-center gap-4 ">
@@ -17,8 +27,8 @@ const Header = () => {
         />
         </div>
         <div>
-          <h2 className="text-primary">Hashu</h2>
-          <p>online</p>
+          <h2 className="text-primary">{selectedChatUser.name || "Unknown"}</h2>
+          <p>{selectedChatUser.isOnline ? "Online":"Offline"}</p>
         </div>
       </div>
       <div className="flex items-center text-text_dark gap-x-5">

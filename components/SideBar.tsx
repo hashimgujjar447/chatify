@@ -9,7 +9,7 @@ interface ChatContact {
   name: string | null;
   email: string;
   avatar: string | null;
-  online?: boolean;
+  isOnline?: boolean;
 }
 
 interface SideBarProps {
@@ -204,7 +204,7 @@ const SideBar = ({ onSelectUser }: SideBarProps) => {
                 <div className='w-12 h-12 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-full flex items-center justify-center text-2xl'>
                   {chat.avatar || chat.name?.[0]?.toUpperCase() || '👤'}
                 </div>
-                {chat.online && (
+                {chat.isOnline && (
                   <div className='absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-900 rounded-full'></div>
                 )}
               </div>

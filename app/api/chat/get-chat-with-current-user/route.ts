@@ -20,11 +20,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if receiver exists and is verified
-    const isReceiverExists = await prisma.user.findUnique({
-      where: {
-        id: receiverId,
-        isVerified: true
-      }
+    const isReceiverExists = await prisma.user.findFirst({
+     where:{
+      id:receiverId,
+      isVerified:true
+     }
     });
 
     if (!isReceiverExists) {
@@ -51,7 +51,8 @@ export async function POST(req: NextRequest) {
             id: true,
             name: true,
             email: true,
-            avatar: true
+            avatar: true,
+            isOnline:true
           }
         },
         receiver: {
@@ -59,7 +60,8 @@ export async function POST(req: NextRequest) {
             id: true,
             name: true,
             email: true,
-            avatar: true
+            avatar: true,
+            isOnline:true
           }
         }
       },
@@ -79,13 +81,13 @@ export async function POST(req: NextRequest) {
 
     if (error instanceof ApiError) {
       return NextResponse.json(
-        { error: error.message },
+        { success: false, message: error.message },
         { status: error.statusCode }
       );
     }
 
     return NextResponse.json(
-      { error: "Internal server error" },
+      { success: false, message: "Internal server error" },
       { status: 500 }
     );
   }

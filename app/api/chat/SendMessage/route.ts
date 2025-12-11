@@ -9,13 +9,14 @@ export async function POST(req: NextRequest) {
     const user = await verifyAuth();
 
     if (!user || typeof user === 'string' || !user.userId) {
-      throw new ApiError("Please login first to send a message", 401);
+      return NextResponse.json({success:false,message:"Please login first to send a message"})
+    
     }
 
     // Body data
-    const { recieverId, message } = await req.json();
+    const { receiverId, message } = await req.json();
 
-    if (!recieverId || !message) {
+    if (!receiverId || !message) {
       throw new ApiError("Receiver ID and message are required", 400);
     }
 
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest) {
     const chat = await prisma.chat.create({
       data: {
         senderId: user.userId,
-        receiverId: recieverId,
+        receiverId: receiverId,
         message: message,
       },
     });

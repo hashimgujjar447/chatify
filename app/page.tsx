@@ -11,6 +11,7 @@ interface SelectedUser {
   name: string | null;
   email: string;
   avatar: string | null;
+  isOnline: boolean | null;
 }
 
 const page = () => {
@@ -20,10 +21,20 @@ const page = () => {
   useEffect(()=>{
    dispatch(refreshUser())
   },[dispatch])
+
+  const handleSelectUser = (user: any) => {
+    setSelectedUser({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      avatar: user.avatar,
+      isOnline: user.isOnline ?? null
+    })
+  }
   
   return (
     <div className='bg-white flex  h-screen'>
-     <SideBar onSelectUser={setSelectedUser} />
+     <SideBar onSelectUser={handleSelectUser} />
      <ChatBox selectedUser={selectedUser} />
     </div>
   )

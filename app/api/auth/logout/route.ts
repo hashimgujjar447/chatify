@@ -9,6 +9,16 @@ export async function POST(req: NextRequest) {
     const user = await verifyAuth();
     console.log("User logging out:", user);
 
+    const updateUser=await prisma?.user.update({
+      where:{
+        email:user.email
+      },data:{
+        isOnline:false
+      }
+    })
+    if(!updateUser){
+      return NextResponse
+    }
     const res = NextResponse.json({
       success: true,
       message: "Logged out successfully",

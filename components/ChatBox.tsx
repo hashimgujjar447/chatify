@@ -1,77 +1,35 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Header from './header'
 import { MessageSquare, Users, Lock, Zap } from 'lucide-react'
+import { useAppSelecter } from '@/store/hooks/hooks';
+import { NextResponse } from 'next/server';
 
-interface ChatBoxProps {
+export interface ChatBoxProps {
   selectedUser?: {
     id: string;
     name: string | null;
     email: string;
     avatar: string | null;
+    isOnline:boolean | null
   } | null;
+}
+
+interface Chat {
+  chatId: string;
+  senderId: string;
+  receiverId: string;
+  message: string;
+  createdAt: string;
+  dateSent?: string;
 }
 
 const ChatBox = ({ selectedUser = null }: ChatBoxProps) => {
   const[message,setMessage]=useState("")
-  const loginUserId="U202"
-  const chats=[
-  {
-    senderId: "U202",
-    receiverId: "U101",
-    message: "Hey, I just saw your message.",
-    dateSent: "2025-03-01 10:18:10"
-  },
-  {
-    senderId: "U101",
-    receiverId: "U202",
-    message: "Yes, the update is pushed now.",
-    dateSent: "2025-03-01 10:19:42"
-  },
-  {
-    senderId: "U202",
-    receiverId: "U101",
-    message: "Let me know if anything breaks.",
-    dateSent: "2025-03-01 10:20:15"
-  }
-  ,
-  {
-    senderId: "U202",
-    receiverId: "U101",
-    message: "Also, I fixed the login bug.",
-    dateSent: "2025-03-01 10:22:01"
-  },
-  {
-    senderId: "U202",
-    receiverId: "U101",
-    message: "We should test it once together.",
-    dateSent: "2025-03-01 10:23:44"
-  },
-  {
-    senderId: "U202",
-    receiverId: "U101",
-    message: "Also, I fixed the login bug.",
-    dateSent: "2025-03-01 10:22:01"
-  },
-  {
-    senderId: "U202",
-    receiverId: "U101",
-    message: "We should test it once together.",
-    dateSent: "2025-03-01 10:23:44"
-  },
-  {
-    senderId: "U202",
-    receiverId: "U101",
-    message: "Also, I fixed the login bug.",
-    dateSent: "2025-03-01 10:22:01"
-  },
-  {
-    senderId: "U202",
-    receiverId: "U101",
-    message: "We should test it once together.",
-    dateSent: "2025-03-01 10:23:44"
-  }
-]
+  const[chats,setChats]=useState<Chat[]>([])
+  const user=useAppSelecter((state) => state.user.user)
+  const loginUserId=user?.userId
+
 
 function getDate(date:string):string{
   const d=new Date(date)
@@ -88,8 +46,63 @@ function getDate(date:string):string{
 
 const handleSendMessage=async(message:string)=>{
    console.log(message)
-   setMessage("")
+   try {
+    if(!message){
+      alert("Message is required")
+      return
+    }
+     const res=await fetch("/api/chat/SendMessage",{
+      method:"POST",
+      headers:{
+        "Content-type":"application/json"
+      },
+      body:JSON.stringify({receiverId:selectedUser?.id,message:message})
+     })
+     if(!res){
+      alert("Failed to send chat")
+      return
+     }
+
+     const data=await res.json()
+     chats.push(data.chat)
+     setMessage("")
+     
+
+   } catch (error) {
+    alert("Failed error message")
+    return
+    
+   }
+  
 }
+
+useEffect(()=>{
+  const getData=async ()=>{
+    if(!selectedUser){
+      return
+    }
+    console.log(selectedUser)
+    try {
+      const response = await fetch("/api/chat/get-chat-with-current-user",{
+        method:"POST",
+        body:JSON.stringify({
+          receiverId: selectedUser.id
+        }),
+        headers:{
+          "Content-Type":"application/json"
+        }
+      })
+      const data = await response.json()
+      if(data.success) {
+        setChats(data.data)
+      }
+      console.log(data)
+    } catch (error) {
+      console.error("Get chats error:", error)
+    }
+  }
+  getData()
+},[selectedUser])
 
   // If no user is selected, show welcome screen
   if (!selectedUser) {
@@ -156,28 +169,24 @@ const handleSendMessage=async(message:string)=>{
 
   return (
     <div className='flex-1 flex flex-col h-screen'>
-        <Header/>
+        <Header selectedChatUser={selectedUser}/>
     <div className='flex-1 px-4 py-2 overflow-y-auto'>
     
       <div className='flex flex-col gap-y-2'>
-   {chats.map((chat,index)=>(
-        <div key={index} className={`flex ${chat.senderId===loginUserId?"justify-end":"justify-start"}`}>
+   {chats.length > 0 ? chats.map((chat, index)=>(
+        <div key={chat.chatId || index} className={`flex ${chat.senderId===loginUserId?"justify-end":"justify-start"}`}>
           <div className={`max-w-[65%] px-3 py-2 rounded-lg shadow-sm ${chat.senderId===loginUserId?"bg-chat-sent rounded-br-none":"bg-chat-received rounded-bl-none"}`}>
             <p className='text-sm break-words'>
               {chat.message}
             </p>
             <p className='text-xs text-gray-600 dark:text-gray-400 mt-1 text-right'>
-            {
-              chat.dateSent &&
-               (<span>
-                {getDate(chat.dateSent)}
-               </span>)
-              
-            }
+              <span>
+                {getDate(chat.createdAt)}
+              </span>
           </p>
           </div>
         </div>
-      ))}
+      )) : <div className='text-black text-center'>No chats found</div>}
       </div>
     </div>
     

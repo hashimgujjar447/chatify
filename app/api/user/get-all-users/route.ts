@@ -22,8 +22,8 @@ export async function GET(req: NextRequest) {
         ]
       },
       include: {
-        sender: { select: { id: true, name: true, email: true, avatar: true } },
-        receiver: { select: { id: true, name: true, email: true, avatar: true } }
+        sender: { select: { id: true, name: true, email: true, avatar: true,isOnline:true } },
+        receiver: { select: { id: true, name: true, email: true, avatar: true,isOnline:true } }
       },
       orderBy: { createdAt: "desc" }
     });

@@ -61,15 +61,56 @@ app.prepare().then(() => {
       socket.to(roomId).emit("user-join", { userId });
     });
 
-    // Send message
+    socket.on("join-group-room", ({ groupId }) => {
+      socket.join(groupId);
+      console.log(`🚪 [SERVER] User ${userId} joined GROUP room: ${groupId}`);
+      console.log(
+        `👥 [SERVER] Group ${groupId} now has ${
+          io.sockets.adapter.rooms.get(groupId)?.size || 0
+        } users`
+      );
+      socket.to(groupId).emit("user-join-group", { userId });
+    });
+
+    // Send private message
     socket.on(
       "send-message",
       ({ roomId, senderId, receiverId, message, chatId, timestamp }) => {
-        console.log("Message received:", message, "Room:", roomId);
+        console.log(
+          "📨 [SERVER] Private message received:",
+          message,
+          "Room:",
+          roomId
+        );
         io.to(roomId).emit("new-message", {
           roomId,
           senderId,
           receiverId,
+          message,
+          chatId,
+          timestamp,
+        });
+      }
+    );
+
+    // Send group message
+    socket.on(
+      "send-group-message",
+      ({ groupId, senderId, message, chatId, timestamp }) => {
+        console.log(
+          "📨 [SERVER] Group message received:",
+          message,
+          "Group:",
+          groupId
+        );
+        console.log(
+          `👥 [SERVER] Broadcasting to ${
+            io.sockets.adapter.rooms.get(groupId)?.size || 0
+          } users`
+        );
+        io.to(groupId).emit("new-group-message", {
+          groupId,
+          senderId,
           message,
           chatId,
           timestamp,

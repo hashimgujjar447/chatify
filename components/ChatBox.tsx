@@ -11,6 +11,7 @@ export interface ChatBoxProps {
     email: string;
     avatar: string | null;
     isOnline: boolean | null;
+    type: string | null;
   } | null;
 }
 
@@ -23,10 +24,20 @@ interface Chat {
   createdAt: string;
   dateSent?: string;
 }
-
+interface GroupChat {
+  chatId: string;
+  senderId: string;
+  groupId: string;
+  message: string;
+  createdAt: string;
+  dateSent?: string;
+  messageType: string;
+  timestamp: string;
+}
 const ChatBox = ({ selectedUser = null }: ChatBoxProps) => {
   const [message, setMessage] = useState("");
   const [chats, setChats] = useState<Chat[]>([]);
+  const [groupChat, setGroupChats] = useState<GroupChat[]>([]);
   const user = useAppSelecter((state) => state.user.user);
   const loginUserId = user?.userId;
   const socket = useAppSelecter((state) => state.socket);
@@ -53,45 +64,89 @@ const ChatBox = ({ selectedUser = null }: ChatBoxProps) => {
         alert("Message is required");
         return;
       }
+      if (selectedUser.type === "group") {
+        const res = await fetch("/api/group/group-chat", {
+          method: "POST",
+          headers: {
+            "Content-type": "application/json",
+          },
+          body: JSON.stringify({
+            groupId: selectedUser.id,
+            message: message,
+          }),
+        });
 
-      const res = await fetch("/api/chat/SendMessage", {
-        method: "POST",
-        headers: {
-          "Content-type": "application/json",
-        },
-        body: JSON.stringify({ receiverId: selectedUser.id, message: message }),
-      });
+        if (!res.ok) {
+          alert("Failed to send chat");
+          return;
+        }
+        const data = await res.json();
+        console.log("✅ [ChatBox] Group message saved to DB:", data);
 
-      if (!res.ok) {
-        alert("Failed to send chat");
-        return;
+        const newMessage = {
+          chatId: data.data.id,
+          senderId: loginUserId,
+          groupId: selectedUser.id,
+          message: message,
+          timestamp: data.data.createdAt,
+          createdAt: data.data.createdAt,
+          messageType: data.data.messageType,
+        };
+
+        setGroupChats((prev) => [...prev, newMessage]);
+
+        // Emit to socket so other group members get it
+        socket.socket?.emit("send-group-message", {
+          chatId: data.data.id,
+          groupId: selectedUser.id,
+          senderId: loginUserId,
+          message: message,
+          timestamp: data.data.createdAt,
+        });
+        console.log("📤 [ChatBox] Group message emitted to socket");
+      } else if (selectedUser.type === "private") {
+        const res = await fetch("/api/chat/SendMessage", {
+          method: "POST",
+          headers: {
+            "Content-type": "application/json",
+          },
+          body: JSON.stringify({
+            receiverId: selectedUser.id,
+            message: message,
+          }),
+        });
+
+        if (!res.ok) {
+          alert("Failed to send chat");
+          return;
+        }
+
+        const data = await res.json();
+        console.log("✅ [ChatBox] Message saved to DB:", data);
+        const getRoomId = roomId(loginUserId, selectedUser.id);
+
+        // Add message to local state immediately (sender sees it)
+        const newMessage = {
+          chatId: data.chat.chatId,
+          senderId: loginUserId,
+          receiverId: selectedUser.id,
+          message: message,
+          timestamp: data.chat.createdAt,
+          createdAt: data.chat.createdAt,
+        };
+
+        setChats((prev) => [...prev, newMessage]);
+
+        // Emit to socket so receiver gets it
+        socket.socket?.emit("send-message", {
+          chatId: data.chat.chatId,
+          roomId: getRoomId,
+          senderId: loginUserId,
+          receiverId: selectedUser.id,
+          message: message,
+          timestamp: data.chat.createdAt,
+        });
       }
-
-      const data = await res.json();
-      console.log("✅ [ChatBox] Message saved to DB:", data);
-      const getRoomId = roomId(loginUserId, selectedUser.id);
-
-      // Add message to local state immediately (sender sees it)
-      const newMessage = {
-        chatId: data.chat.chatId,
-        senderId: loginUserId,
-        receiverId: selectedUser.id,
-        message: message,
-        timestamp: data.chat.createdAt,
-        createdAt: data.chat.createdAt,
-      };
-
-      setChats((prev) => [...prev, newMessage]);
-
-      // Emit to socket so receiver gets it
-      socket.socket?.emit("send-message", {
-        chatId: data.chat.chatId,
-        roomId: getRoomId,
-        senderId: loginUserId,
-        receiverId: selectedUser.id,
-        message: message,
-        timestamp: data.chat.createdAt,
-      });
 
       setMessage("");
     } catch (error) {
@@ -106,13 +161,38 @@ const ChatBox = ({ selectedUser = null }: ChatBoxProps) => {
     }
 
     const getRoomId = roomId(loginUserId, selectedUser.id);
-    console.log("🔵 [ChatBox] Setting up chat with user:", selectedUser.id);
-    console.log("🔵 [ChatBox] Room ID:", getRoomId);
-    console.log("🔵 [ChatBox] Socket connected:", !!socket.socket?.connected);
+    const groupId = selectedUser.id; // Group ID is just the selected user's ID
 
-    // Set up socket listener FIRST before joining room
+    // Handler for group messages
+    const handleReceiveGroupMessage = (data: GroupChat) => {
+      console.log("📨 [ChatBox] Received GROUP message via socket:", data);
+      console.log(
+        "📨 [ChatBox] Group message from:",
+        data.senderId,
+        "Current user:",
+        loginUserId
+      );
+
+      // Prevent duplicate: only add if senderId is NOT current user
+      if (data.senderId !== loginUserId) {
+        console.log(
+          "✅ [ChatBox] Adding group message to state (from other user)"
+        );
+        setGroupChats((prev) => [
+          ...prev,
+          {
+            ...data,
+            createdAt: data.timestamp, // normalize
+          },
+        ]);
+      } else {
+        console.log("⏭️ [ChatBox] Skipping group message (from self)");
+      }
+    };
+
+    // Handler for private messages
     const handleReceiveMessage = (data: Chat) => {
-      console.log("📨 [ChatBox] Received message via socket:", data);
+      console.log("📨 [ChatBox] Received PRIVATE message via socket:", data);
       console.log(
         "📨 [ChatBox] Message from:",
         data.senderId,
@@ -136,33 +216,63 @@ const ChatBox = ({ selectedUser = null }: ChatBoxProps) => {
     };
 
     // Listen for messages BEFORE joining room
-    socket.socket?.on("reply-message", handleReceiveMessage);
-    console.log("🎧 [ChatBox] Listener registered for 'reply-message'");
-
-    // Now join the room
-    socket.socket?.emit("join-room", { roomId: getRoomId });
-    console.log("📍 [ChatBox] Emitted join-room with:", getRoomId);
+    if (selectedUser.type === "private") {
+      socket.socket?.on("new-message", handleReceiveMessage);
+      console.log("🎧 [ChatBox] Listening for PRIVATE messages");
+      // Join private room
+      socket.socket?.emit("join-room", { roomId: getRoomId });
+      console.log("📍 [ChatBox] Joined PRIVATE room:", getRoomId);
+    } else if (selectedUser.type === "group") {
+      socket.socket?.on("new-group-message", handleReceiveGroupMessage);
+      console.log("🎧 [ChatBox] Listening for GROUP messages");
+      // Join group room
+      socket.socket?.emit("join-group-room", { groupId: groupId });
+      console.log("📍 [ChatBox] Joined GROUP room:", groupId);
+    }
 
     // Fetch chat history
     const getData = async () => {
       try {
-        const response = await fetch("/api/chat/get-chat-with-current-user", {
-          method: "POST",
-          body: JSON.stringify({
-            receiverId: selectedUser.id,
-          }),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        const data = await response.json();
-        if (data.success) {
-          setChats(data.data);
-          console.log(
-            "📜 [ChatBox] Loaded chat history:",
-            data.data.length,
-            "messages"
-          );
+        let response;
+        if (selectedUser.type === "group") {
+          response = await fetch("/api/group/get-group-chat", {
+            method: "POST",
+            body: JSON.stringify({
+              groupId: selectedUser.id,
+            }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+          const data = await response.json();
+          console.log("📜 [ChatBox] Group chat response:", data);
+          if (data.success) {
+            setGroupChats(data.data);
+            console.log(
+              "📜 [ChatBox] Loaded group chat history:",
+              data.data.length,
+              "messages"
+            );
+          }
+        } else if (selectedUser.type === "private") {
+          response = await fetch("/api/chat/get-chat-with-current-user", {
+            method: "POST",
+            body: JSON.stringify({
+              receiverId: selectedUser.id,
+            }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          });
+          const data = await response.json();
+          if (data.success) {
+            setChats(data.data);
+            console.log(
+              "📜 [ChatBox] Loaded chat history:",
+              data.data.length,
+              "messages"
+            );
+          }
         }
       } catch (error) {
         console.error("Get chats error:", error);
@@ -172,7 +282,13 @@ const ChatBox = ({ selectedUser = null }: ChatBoxProps) => {
 
     // Cleanup listener when component unmounts or selectedUser changes
     return () => {
-      socket.socket?.off("reply-message", handleReceiveMessage);
+      if (selectedUser.type === "private") {
+        socket.socket?.off("new-message", handleReceiveMessage);
+        console.log("🧹 [ChatBox] Cleaned up PRIVATE message listener");
+      } else if (selectedUser.type === "group") {
+        socket.socket?.off("new-group-message", handleReceiveGroupMessage);
+        console.log("🧹 [ChatBox] Cleaned up GROUP message listener");
+      }
     };
   }, [selectedUser?.id, loginUserId, socket.socket]);
 
@@ -269,33 +385,69 @@ const ChatBox = ({ selectedUser = null }: ChatBoxProps) => {
       <Header selectedChatUser={selectedUser} />
       <div ref={chatContainerRef} className="flex-1 px-4 py-2 overflow-y-auto">
         <div className="flex flex-col gap-y-2">
-          {chats.length > 0 ? (
-            chats.map((chat, index) => (
-              <div
-                key={chat.chatId || index}
-                className={`flex ${
-                  chat.senderId === loginUserId
-                    ? "justify-end"
-                    : "justify-start"
-                }`}
-              >
+          {selectedUser.type === "private" ? (
+            chats.length > 0 ? (
+              chats.map((chat, index) => (
                 <div
-                  className={`max-w-[65%] px-3 py-2 rounded-lg shadow-sm ${
+                  key={chat.chatId || index}
+                  className={`flex ${
                     chat.senderId === loginUserId
-                      ? "bg-chat-sent rounded-br-none"
-                      : "bg-chat-received rounded-bl-none"
+                      ? "justify-end"
+                      : "justify-start"
                   }`}
                 >
-                  <p className="text-sm break-words">{chat.message}</p>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-right">
-                    <span>{getDate(chat.createdAt)}</span>
-                  </p>
+                  <div
+                    className={`max-w-[65%] px-3 py-2 rounded-lg shadow-sm ${
+                      chat.senderId === loginUserId
+                        ? "bg-chat-sent rounded-br-none"
+                        : "bg-chat-received rounded-bl-none"
+                    }`}
+                  >
+                    <p className="text-sm break-words">{chat.message}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-right">
+                      <span>{getDate(chat.createdAt)}</span>
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-black text-center">No chats found</div>
-          )}
+              ))
+            ) : (
+              <div className="text-black text-center">No chats found</div>
+            )
+          ) : selectedUser.type === "group" ? (
+            groupChat.length > 0 ? (
+              groupChat.map((chat, index) => (
+                <div
+                  key={chat.chatId || index}
+                  className={`flex ${
+                    chat.senderId === loginUserId
+                      ? "justify-end"
+                      : "justify-start"
+                  }`}
+                >
+                  <div
+                    className={`max-w-[65%] px-3 py-2 rounded-lg shadow-sm ${
+                      chat.senderId === loginUserId
+                        ? "bg-chat-sent rounded-br-none"
+                        : "bg-chat-received rounded-bl-none"
+                    }`}
+                  >
+                    {/* Show sender name for group messages from others */}
+                    {chat.senderId !== loginUserId && (
+                      <p className="text-xs font-semibold text-teal-600 mb-1">
+                        {chat.senderId}
+                      </p>
+                    )}
+                    <p className="text-sm break-words">{chat.message}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-right">
+                      <span>{getDate(chat.createdAt)}</span>
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-black text-center">No group chats found</div>
+            )
+          ) : null}
         </div>
       </div>
 

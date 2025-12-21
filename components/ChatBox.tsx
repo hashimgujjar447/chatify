@@ -13,6 +13,7 @@ export interface ChatBoxProps {
     isOnline: boolean | null;
     type: string | null;
   } | null;
+  handleOpenMenu?: () => void;
 }
 
 interface Chat {
@@ -34,7 +35,7 @@ interface GroupChat {
   messageType: string;
   timestamp: string;
 }
-const ChatBox = ({ selectedUser = null }: ChatBoxProps) => {
+const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
   const [message, setMessage] = useState("");
   const [chats, setChats] = useState<Chat[]>([]);
   const [groupChat, setGroupChats] = useState<GroupChat[]>([]);
@@ -381,79 +382,114 @@ const ChatBox = ({ selectedUser = null }: ChatBoxProps) => {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-screen">
-      <Header selectedChatUser={selectedUser} />
-      <div ref={chatContainerRef} className="flex-1 px-4 py-2 overflow-y-auto">
-        <div className="flex flex-col gap-y-2">
+    <div className="flex-1 flex flex-col h-screen bg-gradient-to-b from-gray-50 to-white">
+      <Header
+        selectedChatUser={selectedUser}
+        handleOpenMenu={handleOpenMenu || (() => {})}
+      />
+      <div
+        ref={chatContainerRef}
+        className="flex-1 px-6 py-4 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
+      >
+        <div className="flex flex-col gap-y-3">
           {selectedUser.type === "private" ? (
             chats.length > 0 ? (
-              chats.map((chat, index) => (
-                <div
-                  key={chat.chatId || index}
-                  className={`flex ${
-                    chat.senderId === loginUserId
-                      ? "justify-end"
-                      : "justify-start"
-                  }`}
-                >
+              chats.map((chat, index) => {
+                const isSentByMe = chat.senderId === loginUserId;
+                return (
                   <div
-                    className={`max-w-[65%] px-3 py-2 rounded-lg shadow-sm ${
-                      chat.senderId === loginUserId
-                        ? "bg-chat-sent rounded-br-none"
-                        : "bg-chat-received rounded-bl-none"
-                    }`}
+                    key={chat.chatId || index}
+                    className={`flex ${
+                      isSentByMe ? "justify-end" : "justify-start"
+                    } animate-in slide-in-from-bottom-2 duration-300`}
+                    style={{ animationDelay: `${index * 20}ms` }}
                   >
-                    <p className="text-sm break-words">{chat.message}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-right">
-                      <span>{getDate(chat.createdAt)}</span>
-                    </p>
+                    <div
+                      className={`max-w-[70%] px-4 py-2.5 rounded-2xl shadow-md transition-all hover:shadow-lg ${
+                        isSentByMe
+                          ? "bg-gradient-to-br from-teal-500 to-cyan-600 text-white rounded-br-none"
+                          : "bg-white text-gray-800 border border-gray-100 rounded-bl-none"
+                      }`}
+                    >
+                      <p className="text-[15px] break-words leading-relaxed">
+                        {chat.message}
+                      </p>
+                      <p
+                        className={`text-[11px] mt-1.5 text-right ${
+                          isSentByMe ? "text-white/80" : "text-gray-500"
+                        }`}
+                      >
+                        {getDate(chat.createdAt)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
-              <div className="text-black text-center">No chats found</div>
+              <div className="text-center py-12">
+                <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                  <MessageSquare size={32} className="text-gray-400" />
+                </div>
+                <p className="text-gray-500">
+                  No messages yet. Start the conversation!
+                </p>
+              </div>
             )
           ) : selectedUser.type === "group" ? (
             groupChat.length > 0 ? (
-              groupChat.map((chat, index) => (
-                <div
-                  key={chat.chatId || index}
-                  className={`flex ${
-                    chat.senderId === loginUserId
-                      ? "justify-end"
-                      : "justify-start"
-                  }`}
-                >
+              groupChat.map((chat, index) => {
+                const isSentByMe = chat.senderId === loginUserId;
+                return (
                   <div
-                    className={`max-w-[65%] px-3 py-2 rounded-lg shadow-sm ${
-                      chat.senderId === loginUserId
-                        ? "bg-chat-sent rounded-br-none"
-                        : "bg-chat-received rounded-bl-none"
-                    }`}
+                    key={chat.chatId || index}
+                    className={`flex ${
+                      isSentByMe ? "justify-end" : "justify-start"
+                    } animate-in slide-in-from-bottom-2 duration-300`}
+                    style={{ animationDelay: `${index * 20}ms` }}
                   >
-                    {/* Show sender name for group messages from others */}
-                    {chat.senderId !== loginUserId && (
-                      <p className="text-xs font-semibold text-teal-600 mb-1">
-                        {chat.senderId}
+                    <div
+                      className={`max-w-[70%] px-4 py-2.5 rounded-2xl shadow-md transition-all hover:shadow-lg ${
+                        isSentByMe
+                          ? "bg-gradient-to-br from-purple-500 to-pink-600 text-white rounded-br-none"
+                          : "bg-white text-gray-800 border border-gray-100 rounded-bl-none"
+                      }`}
+                    >
+                      {!isSentByMe && (
+                        <p className="text-xs font-semibold text-purple-600 mb-1.5">
+                          {chat.senderId}
+                        </p>
+                      )}
+                      <p className="text-[15px] break-words leading-relaxed">
+                        {chat.message}
                       </p>
-                    )}
-                    <p className="text-sm break-words">{chat.message}</p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 text-right">
-                      <span>{getDate(chat.createdAt)}</span>
-                    </p>
+                      <p
+                        className={`text-[11px] mt-1.5 text-right ${
+                          isSentByMe ? "text-white/80" : "text-gray-500"
+                        }`}
+                      >
+                        {getDate(chat.createdAt)}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             ) : (
-              <div className="text-black text-center">No group chats found</div>
+              <div className="text-center py-12">
+                <div className="w-16 h-16 mx-auto bg-purple-100 rounded-full flex items-center justify-center mb-4">
+                  <Users size={32} className="text-purple-600" />
+                </div>
+                <p className="text-gray-500">
+                  No group messages yet. Be the first to say hi!
+                </p>
+              </div>
             )
           ) : null}
         </div>
       </div>
 
-      <div className="bg-gray-100 px-4 py-3 border-t border-gray-200 ">
-        <div className="flex items-center gap-2">
-          <button className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 p-2">
+      <div className="bg-white px-6 py-4 border-t border-gray-200 shadow-lg">
+        <div className="flex items-center gap-3">
+          <button className="text-gray-500 hover:text-teal-600 p-2.5 hover:bg-teal-50 rounded-xl transition-all hover:scale-110 group">
             <svg
               className="w-6 h-6"
               fill="none"
@@ -471,17 +507,23 @@ const ChatBox = ({ selectedUser = null }: ChatBoxProps) => {
           <input
             type="text"
             value={message}
-            onChange={(e) => {
-              setMessage(e.target.value);
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === "Enter" && message.trim()) {
+                handleSendMessage(message);
+              }
             }}
-            placeholder="Type a message"
-            className="flex-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-4 py-2 rounded-lg outline-none focus:ring-2 focus:ring-[#008069]"
+            placeholder="Type a message..."
+            className="flex-1 bg-gray-100 text-gray-900 px-5 py-3 rounded-2xl outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all border border-transparent focus:border-teal-200"
           />
           <button
             onClick={() => {
-              handleSendMessage(message);
+              if (message.trim()) {
+                handleSendMessage(message);
+              }
             }}
-            className="bg-[#008069] text-white p-2 rounded-full hover:bg-[#007a5a]"
+            disabled={!message.trim()}
+            className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white p-3 rounded-xl hover:from-teal-600 hover:to-cyan-700 transition-all shadow-lg hover:shadow-xl disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed hover:scale-110 active:scale-95 disabled:hover:scale-100"
           >
             <svg
               className="w-6 h-6"

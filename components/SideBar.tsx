@@ -9,6 +9,7 @@ import {
   X,
   Bell,
   Users,
+  MessageSquare,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -127,48 +128,81 @@ const SideBar = ({ onSelectUser }: SideBarProps) => {
   // ================= UI =================
   return (
     <>
-      <div className="w-80 border-r flex flex-col h-screen">
+      <div className="w-80 border-r border-gray-200 flex flex-col h-screen bg-white shadow-lg">
         {/* HEADER */}
-        <div className="px-4 py-4 flex justify-between items-center">
-          <h1 className="text-lg font-bold">Chatify</h1>
+        <div className="px-5 py-5 flex justify-between items-center border-b border-gray-200 bg-gradient-to-r from-teal-500 to-cyan-600">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+              <MessageSquare size={22} className="text-white" />
+            </div>
+            <h1 className="text-xl font-bold text-white">Chatify</h1>
+          </div>
 
           <div ref={menuRef} className="relative">
-            <Menu
-              className="cursor-pointer"
+            <button
               onClick={() => setMenuOpen(!menuOpen)}
-            />
+              className="p-2 hover:bg-white/20 rounded-xl transition-all duration-200 group"
+              aria-label="Menu"
+            >
+              <Menu
+                className="text-white cursor-pointer group-hover:rotate-90 transition-transform duration-300"
+                size={22}
+              />
+            </button>
 
             {menuOpen && (
-              <div className="absolute right-0 mt-2 w-52 bg-white shadow-lg rounded-lg border z-50">
+              <div className="absolute right-0 mt-3 w-56 bg-white shadow-2xl rounded-2xl border border-gray-100 z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
                 <div
                   onClick={() => {
                     setProfileOpen(true);
                     setMenuOpen(false);
                   }}
-                  className="px-4 py-3 flex gap-2 hover:bg-gray-100 cursor-pointer"
+                  className="px-4 py-3.5 flex items-center gap-3 hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 cursor-pointer transition-all group"
                 >
-                  <UserCircle2 size={18} /> Edit Profile
+                  <div className="w-8 h-8 bg-teal-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <UserCircle2 size={18} className="text-teal-600" />
+                  </div>
+                  <span className="font-medium text-gray-700 group-hover:text-teal-600 transition-colors">
+                    Edit Profile
+                  </span>
                 </div>
 
                 <div
                   onClick={() => router.push("/profile")}
-                  className="px-4 py-3 flex gap-2 hover:bg-gray-100 cursor-pointer"
+                  className="px-4 py-3.5 flex items-center gap-3 hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 cursor-pointer transition-all group"
                 >
-                  <Bell size={18} /> Requests
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Bell size={18} className="text-orange-600" />
+                  </div>
+                  <span className="font-medium text-gray-700 group-hover:text-orange-600 transition-colors">
+                    Requests
+                  </span>
                 </div>
 
                 <div
                   onClick={() => setAddContactOpen(true)}
-                  className="px-4 py-3 flex gap-2 hover:bg-gray-100 cursor-pointer"
+                  className="px-4 py-3.5 flex items-center gap-3 hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 cursor-pointer transition-all group"
                 >
-                  <UserRoundPlus size={18} /> Add Contact
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <UserRoundPlus size={18} className="text-green-600" />
+                  </div>
+                  <span className="font-medium text-gray-700 group-hover:text-green-600 transition-colors">
+                    Add Contact
+                  </span>
                 </div>
+
+                <div className="border-t border-gray-100"></div>
 
                 <div
                   onClick={() => router.push("/group")}
-                  className="px-4 py-3 flex gap-2 hover:bg-gray-100 cursor-pointer border-t"
+                  className="px-4 py-3.5 flex items-center gap-3 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 cursor-pointer transition-all group"
                 >
-                  <Users size={18} /> Create Group
+                  <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Users size={18} className="text-purple-600" />
+                  </div>
+                  <span className="font-medium text-gray-700 group-hover:text-purple-600 transition-colors">
+                    Create Group
+                  </span>
                 </div>
               </div>
             )}
@@ -176,55 +210,116 @@ const SideBar = ({ onSelectUser }: SideBarProps) => {
         </div>
 
         {/* SEARCH */}
-        <div className="px-4">
+        <div className="px-4 py-4">
           <div className="relative">
-            <Search className="absolute left-3 top-2.5" size={18} />
+            <Search
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+              size={18}
+            />
             <input
-              className="w-full pl-10 py-2 rounded-full bg-gray-100 outline-none"
-              placeholder="Search..."
+              className="w-full pl-11 pr-4 py-3 rounded-xl bg-gray-100 outline-none focus:bg-gray-50 focus:ring-2 focus:ring-teal-500 transition-all border border-transparent focus:border-teal-200 text-gray-700 placeholder:text-gray-400"
+              placeholder="Search conversations..."
             />
           </div>
         </div>
 
         {/* LIST */}
-        <div className="flex-1 overflow-y-auto px-2 py-3">
-          {loading && <p className="text-center">Loading...</p>}
-          {error && <p className="text-center text-red-500">{error}</p>}
+        <div className="flex-1 overflow-y-auto px-3 py-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="w-10 h-10 border-3 border-teal-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+              <p className="text-gray-500 text-sm">Loading...</p>
+            </div>
+          )}
+          {error && (
+            <div className="text-center py-8">
+              <p className="text-red-500 text-sm">{error}</p>
+            </div>
+          )}
 
           {/* GROUPS */}
           {groupChats.length > 0 && (
             <>
-              <p className="text-xs text-gray-500 px-2 mt-4">GROUPS</p>
-              {groupChats.map((group) => (
+              <div className="flex items-center gap-2 px-3 py-2 mb-2">
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Groups
+                </p>
+                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+              </div>
+              {groupChats.map((group, index) => (
                 <div
                   key={group.id}
                   onClick={() => onSelectUser({ ...group, type: "group" })}
-                  className="flex items-center gap-3 px-3 py-3 hover:bg-gray-100 rounded-lg cursor-pointer"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                  className="flex items-center gap-3 px-3 py-3 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 rounded-xl cursor-pointer transition-all duration-200 mb-1 group animate-in fade-in slide-in-from-left"
                 >
-                  <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-white">
-                    {group.groupImage || group.name[0]}
+                  <div className="relative">
+                    <div className="w-11 h-11 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center text-white font-bold shadow-md group-hover:scale-110 transition-transform">
+                      {group.groupImage ? (
+                        <img
+                          src={group.groupImage}
+                          alt={group.name}
+                          className="w-full h-full object-cover rounded-xl"
+                        />
+                      ) : (
+                        <span>{group.name.charAt(0).toUpperCase()}</span>
+                      )}
+                    </div>
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-purple-500 rounded-full border-2 border-white"></div>
                   </div>
-                  <p className="font-medium">{group.name}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-800 truncate group-hover:text-purple-600 transition-colors">
+                      {group.name}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      Group • {group.groupDescription || "Tap to chat"}
+                    </p>
+                  </div>
                 </div>
               ))}
             </>
           )}
 
           {/* PRIVATE CHATS */}
-          <p className="text-xs text-gray-500 px-2 mt-4">DIRECT MESSAGES</p>
+          <div className="flex items-center gap-2 px-3 py-2 mb-2 mt-4">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Direct Messages
+            </p>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+          </div>
 
-          {privateChats.map((chat) => (
+          {privateChats.map((chat, index) => (
             <div
               key={chat.id}
               onClick={() => onSelectUser({ ...chat, type: "private" })}
-              className="flex items-center gap-3 px-3 py-3 hover:bg-gray-100 rounded-lg cursor-pointer"
+              style={{
+                animationDelay: `${(groupChats.length + index) * 50}ms`,
+              }}
+              className="flex items-center gap-3 px-3 py-3 hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 rounded-xl cursor-pointer transition-all duration-200 mb-1 group animate-in fade-in slide-in-from-left"
             >
-              <div className="w-10 h-10 bg-teal-500 rounded-full flex items-center justify-center text-white">
-                {chat.avatar || chat.name?.[0]}
+              <div className="relative">
+                <div className="w-11 h-11 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-xl flex items-center justify-center text-white font-bold shadow-md group-hover:scale-110 transition-transform">
+                  {chat.avatar ? (
+                    <img
+                      src={chat.avatar}
+                      alt={chat.name || "User"}
+                      className="w-full h-full object-cover rounded-xl"
+                    />
+                  ) : (
+                    <span>{chat.name?.charAt(0).toUpperCase() || "U"}</span>
+                  )}
+                </div>
+                {chat.isOnline && (
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white"></div>
+                )}
               </div>
-              <div>
-                <p className="font-medium">{chat.name}</p>
-                <p className="text-xs text-gray-500">{chat.email}</p>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-800 truncate group-hover:text-teal-600 transition-colors">
+                  {chat.name || "Unknown"}
+                </p>
+                <p className="text-xs text-gray-500 truncate">{chat.email}</p>
               </div>
             </div>
           ))}
@@ -233,41 +328,63 @@ const SideBar = ({ onSelectUser }: SideBarProps) => {
 
       {/* ADD CONTACT MODAL */}
       {addContactOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-80">
-            <h2 className="font-semibold mb-4">Add Contact</h2>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
+          <div className="bg-white p-7 rounded-2xl w-96 shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-teal-500 rounded-xl flex items-center justify-center">
+                <UserRoundPlus size={24} className="text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-800">Add Contact</h2>
+            </div>
             <input
-              className="border w-full p-2 rounded mb-4"
-              placeholder="Email"
+              className="border border-gray-300 w-full px-4 py-3 rounded-xl mb-5 outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-all"
+              placeholder="Enter email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
             <div className="flex justify-end gap-3">
-              <button onClick={() => setAddContactOpen(false)}>Cancel</button>
               <button
-                className="bg-green-600 text-white px-4 py-1 rounded"
+                onClick={() => setAddContactOpen(false)}
+                className="px-5 py-2.5 border-2 border-gray-300 text-gray-700 font-medium rounded-xl hover:bg-gray-50 transition-all hover:scale-105 active:scale-95"
+              >
+                Cancel
+              </button>
+              <button
+                className="px-5 py-2.5 bg-gradient-to-r from-green-500 to-teal-600 text-white font-medium rounded-xl hover:from-green-600 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
                 onClick={handleAddContact}
               >
-                Add
+                Add Contact
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* PROFILE MODAL (unchanged logic) */}
+      {/* PROFILE MODAL */}
       {profileOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center">
-          <div className="bg-white p-6 rounded-xl w-96">
-            <div className="flex justify-between mb-4">
-              <h2 className="font-semibold">Profile</h2>
-              <X
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
+          <div className="bg-white p-7 rounded-2xl w-[450px] shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-xl flex items-center justify-center">
+                  <UserCircle2 size={24} className="text-white" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-800">
+                  Profile Settings
+                </h2>
+              </div>
+              <button
                 onClick={() => setProfileOpen(false)}
-                className="cursor-pointer"
-              />
+                className="p-2 hover:bg-red-50 rounded-xl transition-all hover:scale-110 group"
+              >
+                <X
+                  className="cursor-pointer text-gray-600 group-hover:text-red-500 transition-colors"
+                  size={22}
+                />
+              </button>
             </div>
-            <p className="text-sm text-gray-500">
-              Profile editing logic stays same
+            <p className="text-sm text-gray-600 bg-gray-50 p-4 rounded-xl border border-gray-200">
+              Profile editing functionality will be implemented here.
             </p>
           </div>
         </div>

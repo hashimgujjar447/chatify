@@ -1,6 +1,7 @@
 "use client";
-import React, { memo } from "react";
+import React, { memo, useState } from "react";
 import { Phone, Video, MoreVertical } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface HeaderProps {
   selectedChatUser: {
@@ -16,9 +17,12 @@ interface HeaderProps {
 
 const Header = memo(({ selectedChatUser, handleOpenMenu }: HeaderProps) => {
   const isGroup = selectedChatUser.type === "group";
-  
+  const [showGroupSettingsMenu, setGroupSettingsMenu] =
+    useState<boolean>(false);
+  const router = useRouter();
+
   return (
-    <div className="flex items-center px-6 py-4 justify-between border-b border-gray-200 bg-white shadow-sm">
+    <div className="flex items-center relative px-6 py-4 justify-between border-b border-gray-200 bg-white shadow-sm">
       <div className="flex items-center gap-4">
         <div className="relative">
           <div className="w-12 h-12 bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center rounded-full overflow-hidden ring-2 ring-white shadow-md">
@@ -56,26 +60,39 @@ const Header = memo(({ selectedChatUser, handleOpenMenu }: HeaderProps) => {
           </p>
         </div>
       </div>
-      
+
       <div className="flex items-center text-gray-600 gap-2">
-        <button 
+        <button
           className="p-2.5 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110 group"
           aria-label="Video call"
         >
-          <Video size={22} className="group-hover:text-teal-600 transition-colors" />
+          <Video
+            size={22}
+            className="group-hover:text-teal-600 transition-colors"
+          />
         </button>
-        <button 
+        <button
           className="p-2.5 hover:bg-gray-100 rounded-full transition-all duration-200 hover:scale-110 group"
           aria-label="Voice call"
         >
-          <Phone size={22} className="group-hover:text-teal-600 transition-colors" />
+          <Phone
+            size={22}
+            className="group-hover:text-teal-600 transition-colors"
+          />
         </button>
         <button
-          onClick={handleOpenMenu}
+          onClick={() => {
+            if (isGroup) {
+              router.push(`/group/${selectedChatUser.id}/settings`);
+            }
+          }}
           className="p-2.5 hover:bg-teal-50 rounded-full transition-all duration-200 hover:scale-110 group"
           aria-label="More options"
         >
-          <MoreVertical size={22} className="group-hover:text-teal-600 transition-colors" />
+          <MoreVertical
+            size={22}
+            className="group-hover:text-teal-600 transition-colors"
+          />
         </button>
       </div>
     </div>

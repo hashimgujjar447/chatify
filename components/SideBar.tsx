@@ -45,7 +45,6 @@ const SideBar = ({ onSelectUser }: SideBarProps) => {
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [addContactOpen, setAddContactOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
 
   const [email, setEmail] = useState("");
 
@@ -154,7 +153,7 @@ const SideBar = ({ onSelectUser }: SideBarProps) => {
               <div className="absolute right-0 mt-3 w-56 bg-white shadow-2xl rounded-2xl border border-gray-100 z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
                 <div
                   onClick={() => {
-                    setProfileOpen(true);
+                    router.push("/profile");
                     setMenuOpen(false);
                   }}
                   className="px-4 py-3.5 flex items-center gap-3 hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 cursor-pointer transition-all group"
@@ -163,12 +162,15 @@ const SideBar = ({ onSelectUser }: SideBarProps) => {
                     <UserCircle2 size={18} className="text-teal-600" />
                   </div>
                   <span className="font-medium text-gray-700 group-hover:text-teal-600 transition-colors">
-                    Edit Profile
+                    Profile
                   </span>
                 </div>
 
                 <div
-                  onClick={() => router.push("/profile")}
+                  onClick={() => {
+                    router.push("/profile");
+                    setMenuOpen(false);
+                  }}
                   className="px-4 py-3.5 flex items-center gap-3 hover:bg-gradient-to-r hover:from-teal-50 hover:to-cyan-50 cursor-pointer transition-all group"
                 >
                   <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -356,36 +358,6 @@ const SideBar = ({ onSelectUser }: SideBarProps) => {
                 Add Contact
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* PROFILE MODAL */}
-      {profileOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in duration-200">
-          <div className="bg-white p-7 rounded-2xl w-[450px] shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-teal-400 to-cyan-500 rounded-xl flex items-center justify-center">
-                  <UserCircle2 size={24} className="text-white" />
-                </div>
-                <h2 className="text-xl font-bold text-gray-800">
-                  Profile Settings
-                </h2>
-              </div>
-              <button
-                onClick={() => setProfileOpen(false)}
-                className="p-2 hover:bg-red-50 rounded-xl transition-all hover:scale-110 group"
-              >
-                <X
-                  className="cursor-pointer text-gray-600 group-hover:text-red-500 transition-colors"
-                  size={22}
-                />
-              </button>
-            </div>
-            <p className="text-sm text-gray-600 bg-gray-50 p-4 rounded-xl border border-gray-200">
-              Profile editing functionality will be implemented here.
-            </p>
           </div>
         </div>
       )}

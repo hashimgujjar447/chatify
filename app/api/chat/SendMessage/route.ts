@@ -8,24 +8,38 @@ export async function POST(req: NextRequest) {
     // Verify logged-in user
     const user = await verifyAuth();
 
-    if (!user || typeof user === 'string' || !user.userId) {
-      return NextResponse.json({success:false,message:"Please login first to send a message"})
-    
+    if (!user || typeof user === "string" || !user.userId) {
+      return NextResponse.json({
+        success: false,
+        message: "Please login first to send a message",
+      });
     }
 
     // Body data
-    const { receiverId, message } = await req.json();
+    const { receiverId, message, attachmentUrl, messageType } =
+      await req.json();
 
-    if (!receiverId || !message) {
-      throw new ApiError("Receiver ID and message are required", 400);
+    if (!receiverId || (!message && !attachmentUrl)) {
+      throw new ApiError(
+        "Receiver ID and message/attachment are required",
+        400
+      );
     }
+
+    // Validate messageType
+    const validTypes = ["text", "image", "file", "video"];
+    const finalMessageType = validTypes.includes(messageType)
+      ? messageType
+      : "text";
 
     // Create chat message
     const chat = await prisma.chat.create({
       data: {
         senderId: user.userId,
         receiverId: receiverId,
-        message: message,
+        message: message || "",
+        attachmentUrl: attachmentUrl || null,
+        messageType: finalMessageType,
       },
     });
 
@@ -34,9 +48,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, chat });
-
   } catch (error) {
-
     if (error instanceof ApiError) {
       return NextResponse.json(
         { error: error.message },

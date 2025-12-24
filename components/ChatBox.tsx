@@ -1,15 +1,7 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import Header from "./header";
-import {
-  MessageSquare,
-  Users,
-  Lock,
-  Zap,
-  Plus,
-  Image,
-  File,
-} from "lucide-react";
+import { MessageSquare, Users, Lock, Zap, Plus, Image } from "lucide-react";
 import { useAppSelecter } from "@/store/hooks/hooks";
 
 export interface ChatBoxProps {
@@ -32,6 +24,8 @@ interface Chat {
   message: string;
   createdAt: string;
   dateSent?: string;
+  messageType?: string;
+  attachmentUrl?: string | null;
 }
 interface GroupChat {
   chatId: string;
@@ -42,6 +36,7 @@ interface GroupChat {
   dateSent?: string;
   messageType: string;
   timestamp: string;
+  attachmentUrl?: string | null;
 }
 const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
   const [message, setMessage] = useState("");
@@ -53,8 +48,7 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [openSendImageFile, setOpenSendImageOrFileMenu] =
     useState<boolean>(false);
-  const [chatImage, setChatImage] = useState<File | null>(null);
-  const [chatFile, setChatFile] = useState<File | null>(null);
+  const [chatImage, setChatImage] = useState<string | null>(null);
   const [chatImagepreview, setChatImagepreview] = useState<string | null>(null);
 
   // Cleanup object URL on unmount or when preview changes
@@ -83,11 +77,20 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
 
   const handleSendMessage = async (message: string) => {
     try {
-      if (!message || !selectedUser?.id || !loginUserId) {
+      if (!selectedUser?.id || !loginUserId) {
         alert("Message is required");
         return;
       }
       if (selectedUser.type === "group") {
+        // Determine message type for group
+        let messageType: string = "text";
+        let attachmentUrl: string | null = null;
+
+        if (chatImage) {
+          messageType = "image";
+          attachmentUrl = chatImage;
+        }
+
         const res = await fetch("/api/group/group-chat", {
           method: "POST",
           headers: {
@@ -95,7 +98,9 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
           },
           body: JSON.stringify({
             groupId: selectedUser.id,
-            message: message,
+            message: message || "",
+            messageType: messageType,
+            chatImage: attachmentUrl,
           }),
         });
 
@@ -110,24 +115,45 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
           chatId: data.data.id,
           senderId: loginUserId,
           groupId: selectedUser.id,
-          message: message,
+          message: message || "",
           timestamp: data.data.createdAt,
           createdAt: data.data.createdAt,
           messageType: data.data.messageType,
+          attachmentUrl: data.data.attachmentUrl,
         };
 
         setGroupChats((prev) => [...prev, newMessage]);
+
+        // Clear image after sending
+        if (chatImage) {
+          setChatImage(null);
+          if (chatImagepreview) {
+            URL.revokeObjectURL(chatImagepreview);
+          }
+          setChatImagepreview(null);
+        }
 
         // Emit to socket so other group members get it
         socket.socket?.emit("send-group-message", {
           chatId: data.data.id,
           groupId: selectedUser.id,
           senderId: loginUserId,
-          message: message,
+          message: message || "",
+          messageType: data.data.messageType,
+          attachmentUrl: data.data.attachmentUrl,
           timestamp: data.data.createdAt,
         });
         console.log("📤 [ChatBox] Group message emitted to socket");
       } else if (selectedUser.type === "private") {
+        // Determine message type based on what's being sent
+        let messageType: string = "text";
+        let attachmentUrl: string | null = null;
+
+        if (chatImage) {
+          messageType = "image";
+          attachmentUrl = chatImage;
+        }
+
         const res = await fetch("/api/chat/SendMessage", {
           method: "POST",
           headers: {
@@ -135,7 +161,9 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
           },
           body: JSON.stringify({
             receiverId: selectedUser.id,
-            message: message,
+            message: message || "",
+            attachmentUrl: attachmentUrl,
+            messageType: messageType,
           }),
         });
 
@@ -153,12 +181,23 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
           chatId: data.chat.chatId,
           senderId: loginUserId,
           receiverId: selectedUser.id,
-          message: message,
+          message: message || "",
           timestamp: data.chat.createdAt,
           createdAt: data.chat.createdAt,
+          messageType: data.chat.messageType,
+          attachmentUrl: data.chat.attachmentUrl,
         };
 
         setChats((prev) => [...prev, newMessage]);
+
+        // Clear image after sending
+        if (chatImage) {
+          setChatImage(null);
+          if (chatImagepreview) {
+            URL.revokeObjectURL(chatImagepreview);
+          }
+          setChatImagepreview(null);
+        }
 
         // Emit to socket so receiver gets it
         socket.socket?.emit("send-message", {
@@ -166,7 +205,9 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
           roomId: getRoomId,
           senderId: loginUserId,
           receiverId: selectedUser.id,
-          message: message,
+          message: message || "",
+          messageType: data.chat.messageType,
+          attachmentUrl: data.chat.attachmentUrl,
           timestamp: data.chat.createdAt,
         });
       }
@@ -433,9 +474,25 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
                           : "bg-white text-gray-800 border border-gray-100 rounded-bl-none"
                       }`}
                     >
-                      <p className="text-[15px] break-words leading-relaxed">
-                        {chat.message}
-                      </p>
+                      {/* Show image if messageType is image */}
+                      {chat.messageType === "image" && chat.attachmentUrl && (
+                        <img
+                          src={chat.attachmentUrl}
+                          alt="Chat image"
+                          className="rounded-lg max-w-full mb-2 cursor-pointer"
+                          onClick={() =>
+                            window.open(chat.attachmentUrl!, "_blank")
+                          }
+                        />
+                      )}
+
+                      {/* Show text message */}
+                      {chat.message && (
+                        <p className="text-[15px] break-words leading-relaxed">
+                          {chat.message}
+                        </p>
+                      )}
+
                       <p
                         className={`text-[11px] mt-1.5 text-right ${
                           isSentByMe ? "text-white/80" : "text-gray-500"
@@ -481,9 +538,25 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
                           {chat.senderId}
                         </p>
                       )}
-                      <p className="text-[15px] break-words leading-relaxed">
-                        {chat.message}
-                      </p>
+
+                      {/* Show image if messageType is image */}
+                      {chat.messageType === "image" && chat.attachmentUrl && (
+                        <img
+                          src={chat.attachmentUrl}
+                          alt="Chat image"
+                          className="rounded-lg max-w-full mb-2 cursor-pointer"
+                          onClick={() =>
+                            window.open(chat.attachmentUrl!, "_blank")
+                          }
+                        />
+                      )}
+
+                      {/* Show text message */}
+                      {chat.message && (
+                        <p className="text-[15px] break-words leading-relaxed">
+                          {chat.message}
+                        </p>
+                      )}
                       <p
                         className={`text-[11px] mt-1.5 text-right ${
                           isSentByMe ? "text-white/80" : "text-gray-500"
@@ -549,11 +622,11 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
           />
           <button
             onClick={() => {
-              if (message.trim()) {
+              if (message.trim() || chatImage) {
                 handleSendMessage(message);
               }
             }}
-            disabled={!message.trim()}
+            disabled={!message.trim() && !chatImage}
             className="bg-gradient-to-r from-teal-500 to-cyan-600 text-white p-3 rounded-xl hover:from-teal-600 hover:to-cyan-700 transition-all shadow-lg hover:shadow-xl disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed hover:scale-110 active:scale-95 disabled:hover:scale-100"
           >
             <svg
@@ -625,20 +698,6 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
                 }}
                 type="file"
                 accept="image/*"
-                hidden
-              />
-            </label>
-
-            <label className="flex p-2  hover:rounded cursor-pointer hover:shadow   gap-x-2">
-              <File className="bg-gradient-to-r from-teal-500 to-cyan-600 rounded hover:from-teal-600 text-white hover:to-cyan-700 transition-all" />{" "}
-              Add File
-              <input
-                type="file"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  setChatFile(file);
-                }}
                 hidden
               />
             </label>

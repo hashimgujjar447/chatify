@@ -1,7 +1,15 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import Header from "./header";
-import { MessageSquare, Users, Lock, Zap } from "lucide-react";
+import {
+  MessageSquare,
+  Users,
+  Lock,
+  Zap,
+  Plus,
+  Image,
+  File,
+} from "lucide-react";
 import { useAppSelecter } from "@/store/hooks/hooks";
 
 export interface ChatBoxProps {
@@ -43,6 +51,20 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
   const loginUserId = user?.userId;
   const socket = useAppSelecter((state) => state.socket);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [openSendImageFile, setOpenSendImageOrFileMenu] =
+    useState<boolean>(false);
+  const [chatImage, setChatImage] = useState<File | null>(null);
+  const [chatFile, setChatFile] = useState<File | null>(null);
+  const [chatImagepreview, setChatImagepreview] = useState<string | null>(null);
+
+  // Cleanup object URL on unmount or when preview changes
+  useEffect(() => {
+    return () => {
+      if (chatImagepreview) {
+        URL.revokeObjectURL(chatImagepreview);
+      }
+    };
+  }, [chatImagepreview]);
 
   function getDate(date: string): string {
     const d = new Date(date);
@@ -487,7 +509,7 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
         </div>
       </div>
 
-      <div className="bg-white px-6 py-4 border-t border-gray-200 shadow-lg">
+      <div className="bg-white px-6 py-4 border-t relative border-gray-200 shadow-lg">
         <div className="flex items-center gap-3">
           <button className="text-gray-500 hover:text-teal-600 p-2.5 hover:bg-teal-50 rounded-xl transition-all hover:scale-110 group">
             <svg
@@ -504,6 +526,15 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
               />
             </svg>
           </button>
+          <button
+            onClick={() => {
+              setOpenSendImageOrFileMenu(!openSendImageFile);
+            }}
+            className="text-gray-500 hover:text-teal-600 p-2.5 hover:bg-teal-50 rounded-xl transition-all hover:scale-110 group"
+          >
+            <Plus />
+          </button>
+
           <input
             type="text"
             value={message}
@@ -540,6 +571,79 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
             </svg>
           </button>
         </div>
+        {chatImage && chatImagepreview && (
+          <div className="absolute bottom-20 left-4 bg-white shadow-2xl rounded-xl p-3 border border-gray-200 z-50">
+            <div className="relative">
+              <img
+                src={chatImagepreview}
+                alt="Chat image preview"
+                className="w-32 h-32 object-cover rounded-lg"
+              />
+              <button
+                onClick={() => {
+                  setChatImage(null);
+                  if (chatImagepreview) {
+                    URL.revokeObjectURL(chatImagepreview);
+                  }
+                  setChatImagepreview(null);
+                }}
+                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600 transition-all"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+        {openSendImageFile && (
+          <div className="absolute bottom-20 flex flex-col gap-y-3 left-4 bg-white shadow-lg rounded p-3 border border-gray-200 z-40">
+            <label className="flex hover:rounded hover:shadow cursor-pointer p-2 gap-x-2">
+              <Image className="bg-gradient-to-r from-teal-500 to-cyan-600 rounded hover:from-teal-600 text-white hover:to-cyan-700 transition-all" />{" "}
+              Add Image
+              <input
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+
+                  // Validate file size (max 5MB)
+                  if (file.size > 5 * 1024 * 1024) {
+                    alert("Image must be less than 5MB");
+                    return;
+                  }
+                  const formData = new FormData();
+                  formData.append("image", file);
+
+                  const res = await fetch("/api/upload", {
+                    method: "POST",
+                    body: formData,
+                  });
+                  const data = await res.json();
+
+                  setChatImage(data.url);
+
+                  setChatImagepreview(data.url);
+                  setOpenSendImageOrFileMenu(false); // Close menu after selection
+                }}
+                type="file"
+                accept="image/*"
+                hidden
+              />
+            </label>
+
+            <label className="flex p-2  hover:rounded cursor-pointer hover:shadow   gap-x-2">
+              <File className="bg-gradient-to-r from-teal-500 to-cyan-600 rounded hover:from-teal-600 text-white hover:to-cyan-700 transition-all" />{" "}
+              Add File
+              <input
+                type="file"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setChatFile(file);
+                }}
+                hidden
+              />
+            </label>
+          </div>
+        )}
       </div>
     </div>
   );

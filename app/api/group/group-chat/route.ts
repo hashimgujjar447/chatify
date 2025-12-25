@@ -69,6 +69,40 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    const messageId = groupChat.id;
+
+    const getAllMembers = await prisma.groupMember.findMany({
+      where: {
+        groupId: groupId,
+      },
+      select: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+    const membersIds = getAllMembers.map((m) => m.user.id);
+    // Replace async map with createMany
+    await prisma.groupMessageStatus.createMany({
+      data: membersIds.map((id) => ({ userId: id, messageId })),
+    });
+
+    const updateGroupMessageStatusForMe =
+      await prisma.groupMessageStatus.update({
+        where: {
+          messageId_userId: {
+            messageId: messageId,
+            userId: user.userId,
+          },
+        },
+        data: {
+          isSeen: true,
+        },
+      });
+
     return NextResponse.json({
       success: true,
       message: "Message sent successfully",

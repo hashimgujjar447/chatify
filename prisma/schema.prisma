@@ -71,19 +71,38 @@ enum MessageType {
   video
   file
 }
-
 model Chat {
   chatId      String   @id @default(cuid())
+
   senderId    String
   receiverId  String
-  message     String
-  createdAt   DateTime @default(now())
 
-  messageType   MessageType @default(text)
+  message     String
+  messageType MessageType @default(text)
   attachmentUrl String?
-  sender      User     @relation("SentMessages",  fields: [senderId],   references: [id])
-  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+
+  // 🗑 Soft delete flags
+  isDeletedBySender   Boolean @default(false)
+  isDeletedByReceiver Boolean @default(false)
+
+  // 👀 Read status
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
+
+
+  // 🧨 Delete for everyone
+  isDeletedForEveryone Boolean @default(false)
+  deletedAt            DateTime?
+  
+  createdAt DateTime  @default(now())
+
+  sender    User @relation("SentMessages", fields: [senderId], references: [id])
+  receiver  User @relation("ReceivedMessages", fields: [receiverId], references: [id])
+
+  @@index([senderId, isDeletedBySender])
+  @@index([receiverId, isDeletedByReceiver])
 }
+
 
 
 model Group {

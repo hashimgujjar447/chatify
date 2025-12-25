@@ -19,7 +19,7 @@ export const SocketInitializer = ({
 
     const socket: Socket = io("http://localhost:3000", {
       path: "/socket.io",
-      transports: ["websocket", "polling"],
+      transports: ["websocket"],
       auth: { userId: user.userId },
       reconnection: true,
       reconnectionDelay: 1000,

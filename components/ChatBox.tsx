@@ -1,7 +1,17 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import Header from "./header";
-import { MessageSquare, Users, Lock, Zap, Plus, Image } from "lucide-react";
+import {
+  MessageSquare,
+  Users,
+  Lock,
+  Zap,
+  Plus,
+  Image,
+  ChevronDown,
+  Trash2,
+  UserMinus,
+} from "lucide-react";
 import { useAppSelecter } from "@/store/hooks/hooks";
 
 export interface ChatBoxProps {
@@ -26,6 +36,9 @@ interface Chat {
   dateSent?: string;
   messageType?: string;
   attachmentUrl?: string | null;
+  isDeletedBySender?: boolean;
+  isDeletedByReceiver?: boolean;
+  isDeletedForEveryone?: boolean;
 }
 interface GroupChat {
   chatId: string;
@@ -50,6 +63,11 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
     useState<boolean>(false);
   const [chatImage, setChatImage] = useState<string | null>(null);
   const [chatImagepreview, setChatImagepreview] = useState<string | null>(null);
+  const [showMessageChevron, setShowMessageChevron] = useState<string>("");
+  const [showMessageDeleteMenu, setShowMessageDeleteMenu] =
+    useState<string>("");
+
+  const deleteMessageMenu = useRef<HTMLDivElement>(null);
 
   // Cleanup object URL on unmount or when preview changes
   useEffect(() => {
@@ -69,6 +87,14 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
     });
 
     return getTime;
+  }
+
+  function getTimeForDeleteEveryOne(date: string): boolean {
+    const d = new Date(date);
+    const t = d.getTime();
+    const now = new Date();
+    if (now.getTime() - t > 2 * 60 * 1000) return false;
+    return true;
   }
 
   function roomId(senderId: string, receiverId: string): string {
@@ -279,10 +305,26 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
       }
     };
 
+    const handleDeleteMessage = (chatId: string) => {
+      console.log("going to run delete message on receiver ", chatId);
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.chatId === chatId
+            ? {
+                ...chat,
+                isDeletedForEveryone: true,
+                message: "Message deleted by sender",
+              }
+            : chat
+        )
+      );
+    };
+
     // Listen for messages BEFORE joining room
     if (selectedUser.type === "private") {
       socket.socket?.on("new-message", handleReceiveMessage);
       console.log("🎧 [ChatBox] Listening for PRIVATE messages");
+      socket.socket?.on("delete-message-res", handleDeleteMessage);
       // Join private room
       socket.socket?.emit("join-room", { roomId: getRoomId });
       console.log("📍 [ChatBox] Joined PRIVATE room:", getRoomId);
@@ -348,6 +390,7 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
     return () => {
       if (selectedUser.type === "private") {
         socket.socket?.off("new-message", handleReceiveMessage);
+        socket.socket?.off("delete-message-res", handleDeleteMessage);
         console.log("🧹 [ChatBox] Cleaned up PRIVATE message listener");
       } else if (selectedUser.type === "group") {
         socket.socket?.off("new-group-message", handleReceiveGroupMessage);
@@ -364,6 +407,22 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
       });
     }
   }, [chats]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        deleteMessageMenu.current &&
+        !deleteMessageMenu.current.contains(event.target as Node)
+      ) {
+        setShowMessageDeleteMenu("");
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // If no user is selected, show welcome screen
   if (!selectedUser) {
@@ -457,53 +516,182 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
         <div className="flex flex-col gap-y-3">
           {selectedUser.type === "private" ? (
             chats.length > 0 ? (
-              chats.map((chat, index) => {
-                const isSentByMe = chat.senderId === loginUserId;
-                return (
-                  <div
-                    key={chat.chatId || index}
-                    className={`flex ${
-                      isSentByMe ? "justify-end" : "justify-start"
-                    } animate-in slide-in-from-bottom-2 duration-300`}
-                    style={{ animationDelay: `${index * 20}ms` }}
-                  >
+              chats
+                .filter((c) => {
+                  if (c.senderId === loginUserId && c.isDeletedBySender)
+                    return false;
+                  if (c.receiverId === loginUserId && c.isDeletedByReceiver)
+                    return false;
+                  if (c.isDeletedForEveryone) return false;
+                  return true;
+                })
+                .map((chat, index) => {
+                  const isSentByMe = chat.senderId === loginUserId;
+                  return (
                     <div
-                      className={`max-w-[70%] px-4 py-2.5 rounded-2xl shadow-md transition-all hover:shadow-lg ${
-                        isSentByMe
-                          ? "bg-gradient-to-br from-teal-500 to-cyan-600 text-white rounded-br-none"
-                          : "bg-white text-gray-800 border border-gray-100 rounded-bl-none"
-                      }`}
+                      key={chat.chatId || index}
+                      className={`flex ${
+                        isSentByMe ? "justify-end" : "justify-start"
+                      } animate-in slide-in-from-bottom-2 duration-300`}
+                      style={{ animationDelay: `${index * 20}ms` }}
                     >
-                      {/* Show image if messageType is image */}
-                      {chat.messageType === "image" && chat.attachmentUrl && (
-                        <img
-                          src={chat.attachmentUrl}
-                          alt="Chat image"
-                          className="rounded-lg max-w-full mb-2 cursor-pointer"
-                          onClick={() =>
-                            window.open(chat.attachmentUrl!, "_blank")
-                          }
-                        />
-                      )}
-
-                      {/* Show text message */}
-                      {chat.message && (
-                        <p className="text-[15px] break-words leading-relaxed">
-                          {chat.message}
-                        </p>
-                      )}
-
-                      <p
-                        className={`text-[11px] mt-1.5 text-right ${
-                          isSentByMe ? "text-white/80" : "text-gray-500"
+                      <div
+                        className={`max-w-[70%] px-4 py-4 rounded-2xl relative shadow-md transition-all hover:shadow-lg ${
+                          isSentByMe
+                            ? "bg-gradient-to-br from-teal-500 to-cyan-600 text-white rounded-br-none"
+                            : "bg-white text-gray-800 border border-gray-100 rounded-bl-none"
                         }`}
+                        onMouseEnter={() => {
+                          setShowMessageChevron(chat.chatId);
+                        }}
+                        onMouseLeave={() => {
+                          setShowMessageChevron("");
+                        }}
                       >
-                        {getDate(chat.createdAt)}
-                      </p>
+                        {/* Show image if messageType is image */}
+                        {chat.messageType === "image" && chat.attachmentUrl && (
+                          <img
+                            src={chat.attachmentUrl}
+                            alt="Chat image"
+                            className="rounded-lg max-w-full mb-2 cursor-pointer"
+                            onClick={() =>
+                              window.open(chat.attachmentUrl!, "_blank")
+                            }
+                          />
+                        )}
+
+                        {/* Show text message */}
+                        {chat.message && (
+                          <p className="text-[15px] break-words leading-relaxed">
+                            {chat.message}
+                          </p>
+                        )}
+
+                        <p
+                          className={`text-[11px] mt-1.5 text-right ${
+                            isSentByMe ? "text-white/80" : "text-gray-500"
+                          }`}
+                        >
+                          {getDate(chat.createdAt)}
+                        </p>
+                        {showMessageChevron === chat.chatId && (
+                          <div
+                            className="text-gray-300 absolute right-2 top-0"
+                            onClick={() => {
+                              setShowMessageDeleteMenu(chat.chatId);
+                            }}
+                          >
+                            <ChevronDown />
+                          </div>
+                        )}
+                        {showMessageDeleteMenu === chat.chatId && (
+                          <div
+                            ref={deleteMessageMenu}
+                            className={`absolute ${
+                              chat.senderId === loginUserId ? "-left-40" : ""
+                            } bg-white w-50 shadow-lg px-4 py-4 rounded flex flex-col gap-2 z-50`}
+                          >
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const url =
+                                    chat.senderId === loginUserId
+                                      ? "/api/chat/delete-message-from-me"
+                                      : "/api/chat/delete-message-from-receiver";
+
+                                  const res = await fetch(url, {
+                                    method: "POST",
+                                    body: JSON.stringify({
+                                      messageId: chat.chatId,
+                                    }),
+                                  });
+                                  const data = await res.json();
+
+                                  if (data.success) {
+                                    setChats((prev) =>
+                                      prev.filter(
+                                        (m) => m.chatId !== chat.chatId
+                                      )
+                                    );
+                                  } else {
+                                    console.error(data.message);
+                                  }
+                                } catch (err) {
+                                  console.error(err);
+                                }
+                              }}
+                              className="flex text-black items-center gap-2 hover:text-red-600"
+                            >
+                              <Trash2 size={18} />
+                              Delete for me
+                            </button>
+
+                            {getTimeForDeleteEveryOne(chat.createdAt) &&
+                              chat.senderId === loginUserId && (
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const res = await fetch(
+                                        "/api/chat/delete-from-everyone",
+                                        {
+                                          method: "POST",
+                                          body: JSON.stringify({
+                                            messageId: chat.chatId,
+                                          }),
+                                        }
+                                      );
+                                      const dataBk = await res.json();
+                                      const getRoomId = roomId(
+                                        loginUserId,
+                                        selectedUser.id
+                                      );
+
+                                      if (dataBk.success) {
+                                        console.log("Message deleted for me");
+                                        // Optionally, update state to remove message from UI
+                                        if (socket.socket?.connected) {
+                                          socket.socket.emit(
+                                            "delete-message-everyWhere",
+                                            {
+                                              roomId: getRoomId,
+                                              chatId: chat.chatId,
+                                            }
+                                          );
+                                          // Test emit to check if server receives any event
+                                          socket.socket.emit("test-event", {
+                                            message: "Hello from client",
+                                            chatId: chat.chatId,
+                                          });
+                                        } else {
+                                          console.warn(
+                                            "Socket not connected yet!"
+                                          );
+                                        }
+
+                                        // setChats((prev) =>
+                                        //   prev.filter(
+                                        //     (m) => m.chatId !== chat.chatId
+                                        //   )
+                                        // );
+                                      } else {
+                                        console.error(dataBk.message);
+                                      }
+                                    } catch (error) {
+                                      console.log(error);
+                                    }
+                                  }}
+                                  className="flex items-center gap-2 text-black hover:text-red-600"
+                                >
+                                  <UserMinus size={18} />
+                                  Delete for everyone
+                                </button>
+                              )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })
+                  );
+                })
             ) : (
               <div className="text-center py-12">
                 <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">

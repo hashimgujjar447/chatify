@@ -92,6 +92,19 @@ app.prepare().then(() => {
         });
       }
     );
+    // deleting private messages
+    socket.on("delete-message-everyWhere", ({ roomId, chatId }) => {
+      console.log(
+        "Deleted Message we are going to send it to receiver : ",
+        roomId
+      );
+      io.to(roomId).emit("delete-message-res", chatId);
+    });
+
+    // Test event to check if server receives events
+    socket.on("test-event", (data) => {
+      console.log("📨 [SERVER] Received test-event:", data);
+    });
 
     // Send group message
     socket.on(

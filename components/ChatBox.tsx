@@ -41,7 +41,7 @@ interface Chat {
   isDeletedForEveryone?: boolean;
 }
 interface GroupChat {
-  chatId: string;
+  id: string;
   senderId: string;
   groupId: string;
   message: string;
@@ -50,6 +50,12 @@ interface GroupChat {
   messageType: string;
   timestamp: string;
   attachmentUrl?: string | null;
+  statuses: Array<{
+    isDeleted: boolean;
+    isSeen: boolean;
+    deletedAt: string;
+    user: { id: string };
+  }>;
 }
 const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
   const [message, setMessage] = useState("");
@@ -66,8 +72,13 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
   const [showMessageChevron, setShowMessageChevron] = useState<string>("");
   const [showMessageDeleteMenu, setShowMessageDeleteMenu] =
     useState<string>("");
+  const [showGroupMessageChevron, setShowGroupMessageChevron] =
+    useState<string>("");
+  const [showGroupMessageDeleteMenu, setShowGroupMessageDeleteMenu] =
+    useState<string>("");
 
   const deleteMessageMenu = useRef<HTMLDivElement>(null);
+  const deleteMessageGroupMenu = useRef<HTMLDivElement>(null);
 
   // Cleanup object URL on unmount or when preview changes
   useEffect(() => {
@@ -138,7 +149,7 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
         console.log("✅ [ChatBox] Group message saved to DB:", data);
 
         const newMessage = {
-          chatId: data.data.id,
+          id: data.data.id,
           senderId: loginUserId,
           groupId: selectedUser.id,
           message: message || "",
@@ -146,6 +157,7 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
           createdAt: data.data.createdAt,
           messageType: data.data.messageType,
           attachmentUrl: data.data.attachmentUrl,
+          statuses: data.data.statuses,
         };
 
         setGroupChats((prev) => [...prev, newMessage]);
@@ -415,6 +427,22 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
         !deleteMessageMenu.current.contains(event.target as Node)
       ) {
         setShowMessageDeleteMenu("");
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        deleteMessageGroupMenu.current &&
+        !deleteMessageGroupMenu.current.contains(event.target as Node)
+      ) {
+        setShowGroupMessageDeleteMenu("");
       }
     }
 
@@ -704,58 +732,135 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
             )
           ) : selectedUser.type === "group" ? (
             groupChat.length > 0 ? (
-              groupChat.map((chat, index) => {
-                const isSentByMe = chat.senderId === loginUserId;
-                return (
-                  <div
-                    key={chat.chatId || index}
-                    className={`flex ${
-                      isSentByMe ? "justify-end" : "justify-start"
-                    } animate-in slide-in-from-bottom-2 duration-300`}
-                    style={{ animationDelay: `${index * 20}ms` }}
-                  >
+              groupChat
+                .filter((chat) => {
+                  const myStatus = chat.statuses?.find(
+                    (s) => s.user.id === loginUserId
+                  );
+
+                  // agar current user ke liye delete hai → mat dikhao
+                  if (myStatus?.isDeleted) return false;
+
+                  return true;
+                })
+                .map((chat, index) => {
+                  const isSentByMe = chat.senderId === loginUserId;
+                  return (
                     <div
-                      className={`max-w-[70%] px-4 py-2.5 rounded-2xl shadow-md transition-all hover:shadow-lg ${
-                        isSentByMe
-                          ? "bg-gradient-to-br from-purple-500 to-pink-600 text-white rounded-br-none"
-                          : "bg-white text-gray-800 border border-gray-100 rounded-bl-none"
-                      }`}
+                      key={chat.id || index}
+                      className={`flex ${
+                        isSentByMe ? "justify-end" : "justify-start"
+                      } animate-in slide-in-from-bottom-2 duration-300`}
+                      style={{ animationDelay: `${index * 20}ms` }}
                     >
-                      {!isSentByMe && (
-                        <p className="text-xs font-semibold text-purple-600 mb-1.5">
-                          {chat.senderId}
-                        </p>
-                      )}
-
-                      {/* Show image if messageType is image */}
-                      {chat.messageType === "image" && chat.attachmentUrl && (
-                        <img
-                          src={chat.attachmentUrl}
-                          alt="Chat image"
-                          className="rounded-lg max-w-full mb-2 cursor-pointer"
-                          onClick={() =>
-                            window.open(chat.attachmentUrl!, "_blank")
-                          }
-                        />
-                      )}
-
-                      {/* Show text message */}
-                      {chat.message && (
-                        <p className="text-[15px] break-words leading-relaxed">
-                          {chat.message}
-                        </p>
-                      )}
-                      <p
-                        className={`text-[11px] mt-1.5 text-right ${
-                          isSentByMe ? "text-white/80" : "text-gray-500"
+                      <div
+                        className={`max-w-[70%] px-4 py-2.5 rounded-2xl shadow-md relative transition-all hover:shadow-lg ${
+                          isSentByMe
+                            ? "bg-gradient-to-br from-purple-500 to-pink-600 text-white rounded-br-none"
+                            : "bg-white text-gray-800 border border-gray-100 rounded-bl-none"
                         }`}
+                        onMouseEnter={() => {
+                          setShowGroupMessageChevron(chat.id);
+                        }}
+                        onMouseLeave={() => {
+                          setShowGroupMessageChevron("");
+                        }}
                       >
-                        {getDate(chat.createdAt)}
-                      </p>
+                        {!isSentByMe && (
+                          <p className="text-xs font-semibold text-purple-600 mb-1.5">
+                            {chat.senderId}
+                          </p>
+                        )}
+
+                        {/* Show image if messageType is image */}
+                        {chat.messageType === "image" && chat.attachmentUrl && (
+                          <img
+                            src={chat.attachmentUrl}
+                            alt="Chat image"
+                            className="rounded-lg max-w-full mb-2 cursor-pointer"
+                            onClick={() =>
+                              window.open(chat.attachmentUrl!, "_blank")
+                            }
+                          />
+                        )}
+
+                        {/* Show text message */}
+                        {chat.message && (
+                          <p className="text-[15px] break-words leading-relaxed">
+                            {chat.message}
+                          </p>
+                        )}
+                        <p
+                          className={`text-[11px] mt-1.5 text-right ${
+                            isSentByMe ? "text-white/80" : "text-gray-500"
+                          }`}
+                        >
+                          {getDate(chat.createdAt)}
+                        </p>
+
+                        {showGroupMessageChevron === chat.id && (
+                          <div
+                            className="text-gray-300 absolute right-2 top-0"
+                            onClick={() => {
+                              setShowGroupMessageDeleteMenu(chat.id);
+                            }}
+                          >
+                            <ChevronDown />
+                          </div>
+                        )}
+
+                        {showGroupMessageDeleteMenu === chat.id && (
+                          <div
+                            ref={deleteMessageGroupMenu}
+                            className={`absolute ${
+                              chat.senderId === loginUserId ? "-left-40" : ""
+                            } bg-white w-50 shadow-lg px-4 py-4 rounded flex flex-col gap-2 z-50`}
+                          >
+                            <button
+                              className="flex text-black items-center gap-2 hover:text-red-600"
+                              onClick={async () => {
+                                try {
+                                  const res = await fetch(
+                                    "/api/group/delete-message",
+                                    {
+                                      method: "POST",
+                                      headers: {
+                                        "Content-Type": "application/json",
+                                      },
+                                      body: JSON.stringify({
+                                        groupId: selectedUser.id,
+                                        messageId: chat.id,
+                                      }),
+                                    }
+                                  );
+                                  const data = await res.json();
+                                  if (data.success) {
+                                    setGroupChats((prev) =>
+                                      prev.filter((p) => p.id !== chat.id)
+                                    );
+                                  }
+                                } catch (error) {
+                                  console.log(error);
+                                }
+                              }}
+                            >
+                              <Trash2 size={18} />
+                              Delete for me
+                            </button>
+
+                            {getTimeForDeleteEveryOne(chat.createdAt) &&
+                              chat.senderId === loginUserId && (
+                                <button className="flex items-center gap-2 text-black hover:text-red-600">
+                                  <UserMinus size={18} />
+                                  Delete for everyone
+                                </button>
+                              )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })
+                  );
+                })
             ) : (
               <div className="text-center py-12">
                 <div className="w-16 h-16 mx-auto bg-purple-100 rounded-full flex items-center justify-center mb-4">

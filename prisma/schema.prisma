@@ -144,7 +144,7 @@ model GroupMessageStatus {
   isSeen    Boolean  @default(false)
   deletedAt DateTime?
 
-  message   GroupChat @relation(fields: [messageId], references: [id])
+  message   GroupChat @relation(fields: [messageId], references: [id],onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id])
 
   @@unique([messageId, userId]) // 🔥 VERY IMPORTANT

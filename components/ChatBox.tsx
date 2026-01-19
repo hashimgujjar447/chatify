@@ -50,6 +50,7 @@ interface GroupChat {
   messageType: string;
   timestamp: string;
   attachmentUrl?: string | null;
+  isDeletedForAll?: boolean;
   statuses: Array<{
     isDeleted: boolean;
     isSeen: boolean;
@@ -146,7 +147,6 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
           return;
         }
         const data = await res.json();
-        console.log("✅ [ChatBox] Group message saved to DB:", data);
 
         const newMessage = {
           id: data.data.id,
@@ -181,7 +181,6 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
           attachmentUrl: data.data.attachmentUrl,
           timestamp: data.data.createdAt,
         });
-        console.log("📤 [ChatBox] Group message emitted to socket");
       } else if (selectedUser.type === "private") {
         // Determine message type based on what's being sent
         let messageType: string = "text";
@@ -267,19 +266,8 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
 
     // Handler for group messages
     const handleReceiveGroupMessage = (data: GroupChat) => {
-      console.log("📨 [ChatBox] Received GROUP message via socket:", data);
-      console.log(
-        "📨 [ChatBox] Group message from:",
-        data.senderId,
-        "Current user:",
-        loginUserId
-      );
-
       // Prevent duplicate: only add if senderId is NOT current user
       if (data.senderId !== loginUserId) {
-        console.log(
-          "✅ [ChatBox] Adding group message to state (from other user)"
-        );
         setGroupChats((prev) => [
           ...prev,
           {
@@ -287,24 +275,13 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
             createdAt: data.timestamp, // normalize
           },
         ]);
-      } else {
-        console.log("⏭️ [ChatBox] Skipping group message (from self)");
       }
     };
 
     // Handler for private messages
     const handleReceiveMessage = (data: Chat) => {
-      console.log("📨 [ChatBox] Received PRIVATE message via socket:", data);
-      console.log(
-        "📨 [ChatBox] Message from:",
-        data.senderId,
-        "Current user:",
-        loginUserId
-      );
-
       // Prevent duplicate: only add if senderId is NOT current user
       if (data.senderId !== loginUserId) {
-        console.log("✅ [ChatBox] Adding message to state (from other user)");
         setChats((prev) => [
           ...prev,
           {
@@ -312,13 +289,47 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
             createdAt: data.timestamp, // normalize
           },
         ]);
-      } else {
-        console.log("⏭️ [ChatBox] Skipping message (from self)");
       }
     };
 
+    const handleDeleteMessageGroup = (messageId: string) => {
+      console.log("🔥 [CLIENT] handleDeleteMessageGroup TRIGGERED!");
+      console.log(
+        "The chat id is and i am going to delete it from all receivers",
+        messageId,
+      );
+      console.log("MessageId type:", typeof messageId);
+      console.log("MessageId value:", messageId);
+      console.log("Current groupChats length:", groupChat.length);
+      console.log(groupChat);
+      // Remove the message from receiver's view
+      setGroupChats((prev) => {
+        console.log("Updating groupChats - before:", prev.length);
+
+        // Debug: check if messageId exists in the list
+        const exists = prev.find((chat) => chat.id === messageId);
+        console.log("Message exists in list?", exists ? "YES" : "NO");
+
+        if (!exists) {
+          console.log(
+            "⚠️ Message not found - might be race condition or already deleted",
+          );
+          console.log(
+            "Sample chat IDs:",
+            prev.slice(0, 3).map((c) => c.id),
+          );
+          return prev; // No change if message doesn't exist
+        }
+
+        console.log("Found message:", exists.id);
+        const updated = prev.filter((chat) => chat.id !== messageId);
+        console.log("Updating groupChats - after:", updated.length);
+        console.log("✅ Message filtered out from receiver's view");
+        return updated;
+      });
+    };
+
     const handleDeleteMessage = (chatId: string) => {
-      console.log("going to run delete message on receiver ", chatId);
       setChats((prev) =>
         prev.map((chat) =>
           chat.chatId === chatId
@@ -327,25 +338,26 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
                 isDeletedForEveryone: true,
                 message: "Message deleted by sender",
               }
-            : chat
-        )
+            : chat,
+        ),
       );
     };
 
     // Listen for messages BEFORE joining room
     if (selectedUser.type === "private") {
       socket.socket?.on("new-message", handleReceiveMessage);
-      console.log("🎧 [ChatBox] Listening for PRIVATE messages");
       socket.socket?.on("delete-message-res", handleDeleteMessage);
       // Join private room
       socket.socket?.emit("join-room", { roomId: getRoomId });
-      console.log("📍 [ChatBox] Joined PRIVATE room:", getRoomId);
     } else if (selectedUser.type === "group") {
       socket.socket?.on("new-group-message", handleReceiveGroupMessage);
-      console.log("🎧 [ChatBox] Listening for GROUP messages");
+      socket.socket?.on(
+        "delete-group-everyone-message-res",
+        handleDeleteMessageGroup,
+      );
+
       // Join group room
       socket.socket?.emit("join-group-room", { groupId: groupId });
-      console.log("📍 [ChatBox] Joined GROUP room:", groupId);
     }
 
     // Fetch chat history
@@ -369,7 +381,7 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
             console.log(
               "📜 [ChatBox] Loaded group chat history:",
               data.data.length,
-              "messages"
+              "messages",
             );
           }
         } else if (selectedUser.type === "private") {
@@ -385,11 +397,6 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
           const data = await response.json();
           if (data.success) {
             setChats(data.data);
-            console.log(
-              "📜 [ChatBox] Loaded chat history:",
-              data.data.length,
-              "messages"
-            );
           }
         }
       } catch (error) {
@@ -403,10 +410,12 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
       if (selectedUser.type === "private") {
         socket.socket?.off("new-message", handleReceiveMessage);
         socket.socket?.off("delete-message-res", handleDeleteMessage);
-        console.log("🧹 [ChatBox] Cleaned up PRIVATE message listener");
       } else if (selectedUser.type === "group") {
         socket.socket?.off("new-group-message", handleReceiveGroupMessage);
-        console.log("🧹 [ChatBox] Cleaned up GROUP message listener");
+        socket.socket?.off(
+          "delete-group-everyone-message-res",
+          handleDeleteMessageGroup,
+        );
       }
     };
   }, [selectedUser?.id, loginUserId, socket.socket]);
@@ -638,8 +647,8 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
                                   if (data.success) {
                                     setChats((prev) =>
                                       prev.filter(
-                                        (m) => m.chatId !== chat.chatId
-                                      )
+                                        (m) => m.chatId !== chat.chatId,
+                                      ),
                                     );
                                   } else {
                                     console.error(data.message);
@@ -666,12 +675,12 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
                                           body: JSON.stringify({
                                             messageId: chat.chatId,
                                           }),
-                                        }
+                                        },
                                       );
                                       const dataBk = await res.json();
                                       const getRoomId = roomId(
                                         loginUserId,
-                                        selectedUser.id
+                                        selectedUser.id,
                                       );
 
                                       if (dataBk.success) {
@@ -683,7 +692,7 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
                                             {
                                               roomId: getRoomId,
                                               chatId: chat.chatId,
-                                            }
+                                            },
                                           );
                                           // Test emit to check if server receives any event
                                           socket.socket.emit("test-event", {
@@ -692,7 +701,7 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
                                           });
                                         } else {
                                           console.warn(
-                                            "Socket not connected yet!"
+                                            "Socket not connected yet!",
                                           );
                                         }
 
@@ -734,8 +743,11 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
             groupChat.length > 0 ? (
               groupChat
                 .filter((chat) => {
+                  if (chat.isDeletedForAll) {
+                    return false;
+                  }
                   const myStatus = chat.statuses?.find(
-                    (s) => s.user.id === loginUserId
+                    (s) => s.user.id === loginUserId,
                   );
 
                   // agar current user ke liye delete hai → mat dikhao
@@ -831,12 +843,12 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
                                         groupId: selectedUser.id,
                                         messageId: chat.id,
                                       }),
-                                    }
+                                    },
                                   );
                                   const data = await res.json();
                                   if (data.success) {
                                     setGroupChats((prev) =>
-                                      prev.filter((p) => p.id !== chat.id)
+                                      prev.filter((p) => p.id !== chat.id),
                                     );
                                   }
                                 } catch (error) {
@@ -850,7 +862,61 @@ const ChatBox = ({ selectedUser = null, handleOpenMenu }: ChatBoxProps) => {
 
                             {getTimeForDeleteEveryOne(chat.createdAt) &&
                               chat.senderId === loginUserId && (
-                                <button className="flex items-center gap-2 text-black hover:text-red-600">
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const res = await fetch(
+                                        "/api/group/delete-message-for-everyone",
+                                        {
+                                          method: "DELETE",
+                                          headers: {
+                                            "Content-Type": "application/json",
+                                          },
+                                          body: JSON.stringify({
+                                            groupId: selectedUser.id,
+                                            groupMessageId: chat.id,
+                                          }),
+                                        },
+                                      );
+                                      const data = await res.json();
+
+                                      if (data.success) {
+                                        console.log(
+                                          "Sending the group id and message id to all users",
+                                        );
+                                        console.log(
+                                          "Socket connected?",
+                                          socket.socket?.connected,
+                                        );
+                                        console.log(
+                                          "GroupId:",
+                                          selectedUser.id,
+                                        );
+                                        console.log("MessageId:", chat.id);
+
+                                        if (socket.socket) {
+                                          socket.socket.emit(
+                                            "delete-group-message-from-all",
+                                            {
+                                              groupId: selectedUser.id,
+                                              messageId: chat.id,
+                                            },
+                                          );
+                                          console.log(
+                                            "✅ Emit sent successfully",
+                                          );
+                                        } else {
+                                          console.log(
+                                            "❌ Socket not available",
+                                          );
+                                        }
+                                      }
+                                    } catch (error) {
+                                      console.log(error);
+                                    }
+                                  }}
+                                  className="flex items-center gap-2 text-black hover:text-red-600"
+                                >
                                   <UserMinus size={18} />
                                   Delete for everyone
                                 </button>

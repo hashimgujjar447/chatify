@@ -67,7 +67,7 @@ app.prepare().then(() => {
       console.log(
         `👥 [SERVER] Group ${groupId} now has ${
           io.sockets.adapter.rooms.get(groupId)?.size || 0
-        } users`
+        } users`,
       );
       socket.to(groupId).emit("user-join-group", { userId });
     });
@@ -80,7 +80,7 @@ app.prepare().then(() => {
           "📨 [SERVER] Private message received:",
           message,
           "Room:",
-          roomId
+          roomId,
         );
         io.to(roomId).emit("new-message", {
           roomId,
@@ -90,46 +90,64 @@ app.prepare().then(() => {
           chatId,
           timestamp,
         });
-      }
+      },
     );
     // deleting private messages
     socket.on("delete-message-everyWhere", ({ roomId, chatId }) => {
       console.log(
         "Deleted Message we are going to send it to receiver : ",
-        roomId
+        roomId,
       );
       io.to(roomId).emit("delete-message-res", chatId);
-    });
-
-    // Test event to check if server receives events
-    socket.on("test-event", (data) => {
-      console.log("📨 [SERVER] Received test-event:", data);
     });
 
     // Send group message
     socket.on(
       "send-group-message",
-      ({ groupId, senderId, message, chatId, timestamp }) => {
-        console.log(
-          "📨 [SERVER] Group message received:",
-          message,
-          "Group:",
-          groupId
-        );
-        console.log(
-          `👥 [SERVER] Broadcasting to ${
-            io.sockets.adapter.rooms.get(groupId)?.size || 0
-          } users`
-        );
+      ({
+        groupId,
+        senderId,
+        message,
+        chatId,
+        timestamp,
+        messageType,
+        attachmentUrl,
+      }) => {
+        // Emit complete message data to all group members
         io.to(groupId).emit("new-group-message", {
+          id: chatId,
           groupId,
           senderId,
           message,
-          chatId,
           timestamp,
+          messageType: messageType || "text",
+          attachmentUrl: attachmentUrl || null,
         });
-      }
+      },
     );
+
+    socket.on("delete-group-message-from-all", ({ groupId, messageId }) => {
+      console.log("🗑️ [SERVER] Received delete-group-message-from-all");
+      console.log("GroupId:", groupId);
+      console.log("MessageId:", messageId);
+      console.log("MessageId type:", typeof messageId);
+      console.log(
+        "Room size:",
+        io.sockets.adapter.rooms.get(groupId)?.size || 0,
+      );
+
+      // Test emit first
+      io.to(groupId).emit("test-delete-response", {
+        message: "Test from server",
+        messageId,
+      });
+
+      console.log("🚀 [SERVER] About to emit messageId:", messageId);
+      io.to(groupId).emit("delete-group-everyone-message-res", messageId);
+      console.log(
+        "✅ [SERVER] Emitted delete-group-everyone-message-res to room",
+      );
+    });
 
     // Handle disconnect
     socket.on("disconnect", async () => {
